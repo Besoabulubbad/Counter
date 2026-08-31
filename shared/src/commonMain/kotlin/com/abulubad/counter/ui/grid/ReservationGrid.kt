@@ -24,20 +24,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Text
-import com.abulubad.counter.domain.Reservation
-import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterType
 import com.abulubad.counter.ui.theme.LocalCounterDimens
 import com.abulubad.counter.ui.theme.PlexMono
-import com.abulubad.counter.ui.theme.PlexSans
 import kotlin.math.roundToInt
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
@@ -169,7 +163,7 @@ private fun GridBody(state: GridUiState, scrollX: MutableState<Float>, scrollY: 
             for (row in firstRow..lastRow) {
                 val gridRow = state.rows[row]
                 for (col in firstCol..lastCol) {
-                    Cell(
+                    GridCell(
                         gridRow.cells.getOrNull(col),
                         Modifier
                             .offset {
@@ -185,37 +179,6 @@ private fun GridBody(state: GridUiState, scrollX: MutableState<Float>, scrollY: 
         }
     }
 }
-
-@Composable
-private fun Cell(reservation: Reservation?, modifier: Modifier) {
-    Box(
-        modifier.background(fillFor(reservation)).border(1.dp, CounterColors.Rule),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        if (reservation != null && reservation.status != ReservationStatus.CANCELLED) {
-            Text(
-                reservation.holderName,
-                modifier = Modifier.padding(horizontal = 10.dp),
-                color = onFillFor(reservation),
-                fontFamily = PlexSans,
-                fontSize = CounterType.body,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-private fun fillFor(reservation: Reservation?): Color = when (reservation?.status) {
-    null, ReservationStatus.CANCELLED -> CounterColors.Surface
-    ReservationStatus.HELD -> CounterColors.Held
-    ReservationStatus.NO_SHOW -> CounterColors.NoShow
-    ReservationStatus.CONFIRMED, ReservationStatus.CHECKED_IN -> CounterColors.Confirmed
-}
-
-private fun onFillFor(reservation: Reservation?): Color =
-    if (reservation == null) CounterColors.Ink else CounterColors.OnFill
 
 private fun formatSlotTime(instant: Instant): String {
     val time = instant.toLocalDateTime(TimeZone.currentSystemDefault())
