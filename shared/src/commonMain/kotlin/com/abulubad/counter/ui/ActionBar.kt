@@ -36,16 +36,17 @@ fun NavButton(label: String, active: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-fun PayButton(total: String, onClick: () -> Unit = {}) {
+fun PayButton(total: String?, onClick: () -> Unit = {}) {
+    val enabled = total != null
     Box(
         Modifier
-            .clickable(onClick = onClick)
-            .background(CounterColors.Confirmed)
-            .padding(horizontal = 22.dp, vertical = 11.dp),
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
+            .background(if (enabled) CounterColors.Confirmed else CounterColors.ChromeRaised)
+            .padding(horizontal = 20.dp, vertical = 11.dp),
     ) {
         Text(
-            "Pay $total",
-            color = CounterColors.Surface,
+            if (enabled) "Pay $total" else "No ticket",
+            color = if (enabled) CounterColors.Surface else CounterColors.OnChromeMuted,
             fontFamily = PlexMono,
             fontSize = CounterType.emphasis,
             fontWeight = FontWeight.SemiBold,

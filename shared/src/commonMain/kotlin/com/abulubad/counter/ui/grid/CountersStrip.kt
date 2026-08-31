@@ -15,6 +15,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.abulubad.counter.ui.LocalPane
+import com.abulubad.counter.ui.Pane
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterType
 import com.abulubad.counter.ui.theme.PlexMono
@@ -22,6 +24,7 @@ import com.abulubad.counter.ui.theme.PlexSans
 
 @Composable
 fun CountersStrip(counters: Counters, modifier: Modifier = Modifier) {
+    val compact = LocalPane.current == Pane.Compact
     Row(
         modifier
             .fillMaxWidth()
@@ -33,28 +36,28 @@ fun CountersStrip(counters: Counters, modifier: Modifier = Modifier) {
             }
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 16.dp else 20.dp),
     ) {
-        Text(
-            "Main",
-            color = CounterColors.Ink,
-            fontFamily = PlexSans,
-            fontSize = CounterType.body,
-            fontWeight = FontWeight.SemiBold,
-        )
-        CounterItem("slots", counters.slots)
+        if (!compact) {
+            Text(
+                "Main",
+                color = CounterColors.Ink,
+                fontFamily = PlexSans,
+                fontSize = CounterType.body,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
         CounterItem("booked", counters.booked)
-        CounterItem("held", counters.held)
-        CounterItem("paid", counters.paid)
-        CounterItem("no shows", counters.noShows)
-        CounterItem("open", counters.open)
+        if (compact) {
+            CounterItem("open", counters.open)
+            CounterItem("unsynced", 0)
+        } else {
+            CounterItem("held", counters.held)
+            CounterItem("paid", counters.paid)
+            CounterItem("no shows", counters.noShows)
+            CounterItem("open", counters.open)
+        }
         Spacer(Modifier.weight(1f))
-        Text(
-            "recomp ${RecompositionStats.live}",
-            color = CounterColors.InkMuted,
-            fontFamily = PlexMono,
-            fontSize = CounterType.micro,
-        )
     }
 }
 
