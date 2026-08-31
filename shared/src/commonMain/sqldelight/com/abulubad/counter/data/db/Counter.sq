@@ -1,0 +1,80 @@
+import kotlin.Boolean;
+
+CREATE TABLE resource (
+  id TEXT NOT NULL PRIMARY KEY,
+  name TEXT NOT NULL
+);
+
+CREATE TABLE subResource (
+  id TEXT NOT NULL PRIMARY KEY,
+  resourceId TEXT NOT NULL,
+  name TEXT NOT NULL
+);
+
+CREATE TABLE slot (
+  id TEXT NOT NULL PRIMARY KEY,
+  resourceId TEXT NOT NULL,
+  subResourceId TEXT,
+  startsAtEpochMs INTEGER NOT NULL,
+  capacity INTEGER NOT NULL,
+  rateCode TEXT NOT NULL,
+  rateName TEXT NOT NULL,
+  ratePriceMinor INTEGER NOT NULL,
+  rateCurrency TEXT NOT NULL
+);
+
+CREATE TABLE reservation (
+  id TEXT NOT NULL PRIMARY KEY,
+  slotId TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  partySize INTEGER NOT NULL,
+  holderName TEXT NOT NULL,
+  isGuest INTEGER AS Boolean NOT NULL,
+  duration TEXT NOT NULL,
+  rateCode TEXT NOT NULL,
+  priceMinorUnits INTEGER NOT NULL,
+  paidMinorUnits INTEGER NOT NULL,
+  bookedOnline INTEGER AS Boolean NOT NULL,
+  hasCart INTEGER AS Boolean NOT NULL,
+  status TEXT NOT NULL,
+  version INTEGER NOT NULL
+);
+
+CREATE TABLE outboxEntry (
+  seq INTEGER PRIMARY KEY AUTOINCREMENT,
+  operation TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  createdAtEpochMs INTEGER NOT NULL
+);
+
+countSlots:
+SELECT count(*) FROM slot;
+
+countReservations:
+SELECT count(*) FROM reservation;
+
+selectAllResources:
+SELECT * FROM resource;
+
+selectAllSubResources:
+SELECT * FROM subResource;
+
+selectAllSlots:
+SELECT * FROM slot ORDER BY startsAtEpochMs;
+
+selectAllReservations:
+SELECT * FROM reservation;
+
+insertResource:
+INSERT INTO resource(id, name) VALUES (?, ?);
+
+insertSubResource:
+INSERT INTO subResource(id, resourceId, name) VALUES (?, ?, ?);
+
+insertSlot:
+INSERT INTO slot(id, resourceId, subResourceId, startsAtEpochMs, capacity, rateCode, rateName, ratePriceMinor, rateCurrency)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertReservation:
+INSERT INTO reservation(id, slotId, position, partySize, holderName, isGuest, duration, rateCode, priceMinorUnits, paidMinorUnits, bookedOnline, hasCart, status, version)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
