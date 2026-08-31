@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -25,13 +27,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.Text
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterType
 import com.abulubad.counter.ui.theme.LocalCounterDimens
 import com.abulubad.counter.ui.theme.PlexMono
+import com.abulubad.counter.ui.theme.PlexSans
 import kotlin.math.roundToInt
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
@@ -44,7 +47,7 @@ fun ReservationGrid(state: GridUiState, modifier: Modifier = Modifier) {
     val scrollY = remember { mutableStateOf(0f) }
 
     Column(modifier.fillMaxSize().background(CounterColors.Surface)) {
-        Row(Modifier.height(dimens.rowHeight)) {
+        Row(Modifier.height(dimens.headerHeight)) {
             Box(
                 Modifier.width(dimens.timeColWidth).fillMaxHeight()
                     .background(CounterColors.SurfaceSunk)
@@ -66,19 +69,20 @@ private fun HeaderStrip(positions: Int, scrollX: MutableState<Float>, modifier: 
     BoxWithConstraints(modifier.background(CounterColors.SurfaceSunk)) {
         val cellW = with(density) { dimens.cellWidth.toPx() }
         val width = constraints.maxWidth.toFloat()
-        val sx = scrollX.value
-        val firstCol = (sx / cellW).toInt().coerceIn(0, (positions - 1).coerceAtLeast(0))
-        val lastCol = ((sx + width) / cellW).toInt().coerceIn(0, (positions - 1).coerceAtLeast(0))
+        val last = (positions - 1).coerceAtLeast(0)
+        val firstCol = (scrollX.value / cellW).toInt().coerceIn(0, last)
+        val lastCol = ((scrollX.value + width) / cellW).toInt().coerceIn(0, last)
         for (col in firstCol..lastCol) {
             Box(
                 Modifier
                     .offset { IntOffset((col * cellW - scrollX.value).roundToInt(), 0) }
-                    .size(dimens.cellWidth, dimens.rowHeight)
-                    .border(1.dp, CounterColors.Rule),
-                contentAlignment = Alignment.Center,
+                    .size(dimens.cellWidth, dimens.headerHeight)
+                    .border(1.dp, CounterColors.Rule)
+                    .padding(horizontal = 9.dp),
+                contentAlignment = Alignment.CenterStart,
             ) {
                 Text(
-                    "${col + 1}",
+                    "Position ${col + 1}",
                     color = CounterColors.InkMuted,
                     fontFamily = PlexMono,
                     fontSize = CounterType.micro,
@@ -93,27 +97,35 @@ private fun TimeColumn(rows: List<GridRow>, scrollY: MutableState<Float>, modifi
     val dimens = LocalCounterDimens.current
     val density = LocalDensity.current
     BoxWithConstraints(modifier.background(CounterColors.SurfaceSunk)) {
+        if (rows.isEmpty()) return@BoxWithConstraints
         val rowH = with(density) { dimens.rowHeight.toPx() }
         val height = constraints.maxHeight.toFloat()
-        val sy = scrollY.value
-        if (rows.isEmpty()) return@BoxWithConstraints
-        val firstRow = (sy / rowH).toInt().coerceIn(0, rows.lastIndex)
-        val lastRow = ((sy + height) / rowH).toInt().coerceIn(0, rows.lastIndex)
+        val firstRow = (scrollY.value / rowH).toInt().coerceIn(0, rows.lastIndex)
+        val lastRow = ((scrollY.value + height) / rowH).toInt().coerceIn(0, rows.lastIndex)
         for (row in firstRow..lastRow) {
-            Box(
+            Column(
                 Modifier
                     .offset { IntOffset(0, (row * rowH - scrollY.value).roundToInt()) }
                     .size(dimens.timeColWidth, dimens.rowHeight)
-                    .border(1.dp, CounterColors.Rule),
-                contentAlignment = Alignment.CenterStart,
+                    .border(1.dp, CounterColors.Rule)
+                    .padding(horizontal = 9.dp),
+                verticalArrangement = Arrangement.Center,
             ) {
                 Text(
                     formatSlotTime(rows[row].slot.startsAt),
-                    modifier = Modifier.padding(horizontal = 10.dp),
                     color = CounterColors.Ink,
                     fontFamily = PlexMono,
                     fontSize = CounterType.body,
+                    fontWeight = FontWeight.Medium,
                 )
+                if (rows[row].subLabel.isNotEmpty()) {
+                    Text(
+                        rows[row].subLabel,
+                        color = CounterColors.InkMuted,
+                        fontFamily = PlexSans,
+                        fontSize = CounterType.micro,
+                    )
+                }
             }
         }
     }
@@ -152,8 +164,9 @@ private fun GridBody(state: GridUiState, scrollX: MutableState<Float>, scrollY: 
         val sy = scrollY.value.coerceIn(0f, maxY)
         val firstRow = (sy / rowH).toInt().coerceIn(0, state.rows.lastIndex)
         val lastRow = ((sy + bodyH) / rowH).toInt().coerceIn(0, state.rows.lastIndex)
-        val firstCol = (sx / cellW).toInt().coerceIn(0, (state.positions - 1).coerceAtLeast(0))
-        val lastCol = ((sx + bodyW) / cellW).toInt().coerceIn(0, (state.positions - 1).coerceAtLeast(0))
+        val lastPos = (state.positions - 1).coerceAtLeast(0)
+        val firstCol = (sx / cellW).toInt().coerceIn(0, lastPos)
+        val lastCol = ((sx + bodyW) / cellW).toInt().coerceIn(0, lastPos)
 
         Box(
             Modifier.fillMaxSize()
@@ -165,6 +178,7 @@ private fun GridBody(state: GridUiState, scrollX: MutableState<Float>, scrollY: 
                 for (col in firstCol..lastCol) {
                     GridCell(
                         gridRow.cells.getOrNull(col),
+                        gridRow.slot.rate.currency,
                         Modifier
                             .offset {
                                 IntOffset(

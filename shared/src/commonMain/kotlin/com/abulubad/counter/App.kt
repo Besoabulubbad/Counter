@@ -1,8 +1,9 @@
 package com.abulubad.counter
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -10,10 +11,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.abulubad.counter.ui.CounterScaffold
+import com.abulubad.counter.ui.grid.CountersStrip
 import com.abulubad.counter.ui.grid.GridViewModel
-import com.abulubad.counter.ui.grid.RecompositionStats
 import com.abulubad.counter.ui.grid.ReservationGrid
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterTheme
@@ -46,25 +46,16 @@ private fun CounterShell() {
             )
             Spacer(Modifier.weight(1f))
             Text(
-                "booked ${state.counters.booked}   open ${state.counters.available}",
+                "Main · front and back nine",
                 color = CounterColors.OnChromeMuted,
                 fontFamily = PlexMono,
-                fontSize = CounterType.micro,
+                fontSize = CounterType.body,
             )
-            Spacer(Modifier.width(16.dp))
-            RecompositionReadout(state.rows.size * state.positions)
         },
     ) {
-        ReservationGrid(state, Modifier.fillMaxSize())
+        Column(Modifier.fillMaxSize()) {
+            CountersStrip(state.counters, Modifier.fillMaxWidth())
+            ReservationGrid(state, Modifier.weight(1f).fillMaxWidth())
+        }
     }
-}
-
-@Composable
-private fun RecompositionReadout(totalCells: Int) {
-    Text(
-        "cells ${RecompositionStats.live}/$totalCells",
-        color = CounterColors.OnChromeMuted,
-        fontFamily = PlexMono,
-        fontSize = CounterType.micro,
-    )
 }

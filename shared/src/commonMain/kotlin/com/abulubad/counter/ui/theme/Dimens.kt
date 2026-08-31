@@ -7,6 +7,7 @@ import com.abulubad.counter.platform.InputMode
 
 data class CounterDimens(
     val rowHeight: Dp,
+    val headerHeight: Dp,
     val cellWidth: Dp,
     val timeColWidth: Dp,
     val minHitTarget: Dp,
@@ -17,6 +18,7 @@ data class CounterDimens(
 
 val PointerDimens = CounterDimens(
     rowHeight = 56.dp,
+    headerHeight = 34.dp,
     cellWidth = 184.dp,
     timeColWidth = 100.dp,
     minHitTarget = 32.dp,
@@ -27,6 +29,7 @@ val PointerDimens = CounterDimens(
 
 val TouchDimens = CounterDimens(
     rowHeight = 64.dp,
+    headerHeight = 34.dp,
     cellWidth = 168.dp,
     timeColWidth = 84.dp,
     minHitTarget = 48.dp,

@@ -30,7 +30,8 @@ class GridModelTest {
     @Test
     fun countersReconcile() {
         val grid = buildGrid(buildSeed().slots, buildSeed().reservations)
-        assertEquals(grid.counters.total, grid.counters.booked + grid.counters.available)
+        assertEquals(grid.counters.slots * 6, grid.counters.open + grid.counters.booked)
         assertTrue(grid.counters.booked > 0)
+        assertTrue(grid.counters.held > 0)
     }
 }

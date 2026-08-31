@@ -8,6 +8,7 @@ import com.abulubad.counter.domain.Resource
 import com.abulubad.counter.domain.Slot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -22,12 +23,11 @@ class CounterRepository(private val database: CounterDatabase) {
         queries.selectAllReservations().asFlow().mapToList(Dispatchers.Default)
             .map { rows -> rows.map { it.toDomain() } }
 
-    suspend fun resources(): List<Resource> = withContext(Dispatchers.Default) {
-        resourcesToDomain(
-            queries.selectAllResources().executeAsList(),
-            queries.selectAllSubResources().executeAsList(),
-        )
-    }
+    fun resources(): Flow<List<Resource>> =
+        combine(
+            queries.selectAllResources().asFlow().mapToList(Dispatchers.Default),
+            queries.selectAllSubResources().asFlow().mapToList(Dispatchers.Default),
+        ) { resources, subs -> resourcesToDomain(resources, subs) }
 
     suspend fun seedIfEmpty(bundle: SeedBundle = buildSeed()) = withContext(Dispatchers.Default) {
         if (queries.countSlots().executeAsOne() > 0L) return@withContext

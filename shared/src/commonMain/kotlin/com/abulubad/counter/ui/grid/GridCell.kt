@@ -1,9 +1,15 @@
 package com.abulubad.counter.ui.grid
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -20,14 +26,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.abulubad.counter.domain.DurationCode
 import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.domain.ReservationStatus
+import com.abulubad.counter.platform.formatCurrency
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterType
+import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
 
 @Composable
-internal fun GridCell(reservation: Reservation?, modifier: Modifier) {
+internal fun GridCell(reservation: Reservation?, currency: String, modifier: Modifier) {
     DisposableEffect(Unit) {
         RecompositionStats.enter()
         onDispose { RecompositionStats.leave() }
@@ -38,25 +47,86 @@ internal fun GridCell(reservation: Reservation?, modifier: Modifier) {
             .drawWithContent {
                 if (reservation != null) drawCellCues(reservation)
                 drawContent()
-            }
-            .border(1.dp, CounterColors.Rule),
+                drawSeams()
+            },
         contentAlignment = Alignment.CenterStart,
     ) {
-        if (reservation != null) {
-            val cancelled = reservation.status == ReservationStatus.CANCELLED
+        when {
+            reservation == null -> Unit
+            reservation.status == ReservationStatus.CANCELLED -> CancelledContent(reservation)
+            else -> CellContent(reservation, currency)
+        }
+    }
+}
+
+@Composable
+private fun CellContent(reservation: Reservation, currency: String) {
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = 9.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                "${reservation.partySize}",
+                color = CounterColors.OnFillMuted,
+                fontFamily = PlexMono,
+                fontSize = CounterType.micro,
+            )
             Text(
                 reservation.holderName,
-                modifier = Modifier.padding(start = 12.dp, end = 8.dp),
-                color = if (cancelled) CounterColors.InkMuted else CounterColors.OnFill,
+                modifier = Modifier.weight(1f, fill = false),
+                color = CounterColors.OnFill,
                 fontFamily = PlexSans,
                 fontSize = CounterType.body,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                textDecoration = if (cancelled) TextDecoration.LineThrough else null,
+            )
+            if (reservation.bookedOnline) {
+                Box(Modifier.size(5.dp).background(CounterColors.OnFill.copy(alpha = 0.85f), CircleShape))
+            }
+        }
+        Spacer(Modifier.size(2.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            Text(durationLabel(reservation.duration), color = CounterColors.OnFillMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
+            Text(reservation.rateCode, color = CounterColors.OnFillMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
+            if (reservation.hasCart) {
+                Text("cart", color = CounterColors.OnFillMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
+            }
+            Spacer(Modifier.weight(1f))
+            Text(
+                formatCurrency(reservation.priceMinorUnits, currency),
+                color = CounterColors.OnFill,
+                fontFamily = PlexMono,
+                fontSize = CounterType.body,
             )
         }
     }
+}
+
+@Composable
+private fun CancelledContent(reservation: Reservation) {
+    Text(
+        reservation.holderName,
+        modifier = Modifier.padding(horizontal = 9.dp),
+        color = CounterColors.InkMuted,
+        fontFamily = PlexSans,
+        fontSize = CounterType.body,
+        textDecoration = TextDecoration.LineThrough,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+private fun durationLabel(duration: DurationCode): String = when (duration) {
+    DurationCode.NINE -> "9H"
+    DurationCode.EIGHTEEN -> "18H"
 }
 
 private fun fillFor(reservation: Reservation?): Color = when (reservation?.status) {
@@ -64,6 +134,12 @@ private fun fillFor(reservation: Reservation?): Color = when (reservation?.statu
     ReservationStatus.HELD -> CounterColors.Held
     ReservationStatus.NO_SHOW -> CounterColors.NoShow
     ReservationStatus.CONFIRMED, ReservationStatus.CHECKED_IN -> CounterColors.Confirmed
+}
+
+private fun DrawScope.drawSeams() {
+    val w = 1.dp.toPx()
+    drawLine(CounterColors.Rule, Offset(size.width - w / 2, 0f), Offset(size.width - w / 2, size.height), strokeWidth = w)
+    drawLine(CounterColors.Rule, Offset(0f, size.height - w / 2), Offset(size.width, size.height - w / 2), strokeWidth = w)
 }
 
 private fun DrawScope.drawCellCues(reservation: Reservation) {
@@ -79,10 +155,7 @@ private fun DrawScope.drawCellCues(reservation: Reservation) {
             )
         }
         ReservationStatus.CHECKED_IN -> {
-            drawRect(
-                color = CounterColors.CheckedInEdge,
-                size = Size(4.dp.toPx(), size.height),
-            )
+            drawRect(color = CounterColors.CheckedInEdge, size = Size(4.dp.toPx(), size.height))
         }
         ReservationStatus.NO_SHOW -> {
             clipRect {
