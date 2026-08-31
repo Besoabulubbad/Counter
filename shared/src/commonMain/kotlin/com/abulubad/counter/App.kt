@@ -1,49 +1,107 @@
 package com.abulubad.counter
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import org.jetbrains.compose.resources.painterResource
-
-import counter.shared.generated.resources.Res
-import counter.shared.generated.resources.compose_multiplatform
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.abulubad.counter.ui.theme.CounterColors
+import com.abulubad.counter.ui.theme.CounterTheme
+import com.abulubad.counter.ui.theme.CounterType
+import com.abulubad.counter.ui.theme.LocalCounterDimens
+import com.abulubad.counter.ui.theme.PlexMono
+import com.abulubad.counter.ui.theme.PlexSans
 
 @Composable
-@Preview
 fun App() {
-    MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
+    CounterTheme {
+        val dimens = LocalCounterDimens.current
+        Column(Modifier.fillMaxSize().background(CounterColors.Surface)) {
+            Row(
+                Modifier.fillMaxWidth()
+                    .height(dimens.chromeHeight)
+                    .background(CounterColors.Chrome)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Counter",
+                    color = CounterColors.OnChrome,
+                    fontFamily = PlexSans,
+                    fontSize = CounterType.emphasis,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "theme preview",
+                    color = CounterColors.OnChromeMuted,
+                    fontFamily = PlexSans,
+                    fontSize = CounterType.micro,
+                )
             }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
-                }
+
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                StateSwatches()
             }
         }
+    }
+}
+
+@Composable
+private fun StateSwatches() {
+    val states = listOf(
+        Triple("Open", CounterColors.Surface, CounterColors.Ink),
+        Triple("Held", CounterColors.Held, CounterColors.OnFill),
+        Triple("Confirmed", CounterColors.Confirmed, CounterColors.OnFill),
+        Triple("Checked in", CounterColors.Confirmed, CounterColors.CheckedInEdge),
+        Triple("No show", CounterColors.NoShow, CounterColors.OnFill),
+        Triple("Conflict", CounterColors.ConflictWash, CounterColors.Conflict),
+    )
+    for ((label, fill, ink) in states) {
+        SwatchRow(label, fill, ink)
+    }
+}
+
+@Composable
+private fun SwatchRow(label: String, fill: Color, ink: Color) {
+    val dimens = LocalCounterDimens.current
+    Row(
+        Modifier.fillMaxWidth().height(dimens.rowHeight).padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.width(dimens.cellWidth).height(dimens.rowHeight - 12.dp)
+                .background(fill),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Text(
+                label,
+                modifier = Modifier.padding(horizontal = 10.dp),
+                color = ink,
+                fontFamily = PlexSans,
+                fontSize = CounterType.body,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(
+            "$120.00",
+            color = CounterColors.Ink,
+            fontFamily = PlexMono,
+            fontSize = CounterType.body,
+        )
     }
 }
