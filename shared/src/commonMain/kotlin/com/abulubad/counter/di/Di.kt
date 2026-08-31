@@ -2,6 +2,7 @@ package com.abulubad.counter.di
 
 import com.abulubad.counter.data.CounterRepository
 import com.abulubad.counter.data.createCounterDatabase
+import com.abulubad.counter.ui.grid.GridViewModel
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.dsl.KoinAppDeclaration
@@ -14,6 +15,10 @@ val dataModule = module {
     single { CounterRepository(get()) }
 }
 
+val uiModule = module {
+    single { GridViewModel(get()) }
+}
+
 private var started = false
 
 fun initKoin(appDeclaration: KoinAppDeclaration = {}) {
@@ -21,6 +26,6 @@ fun initKoin(appDeclaration: KoinAppDeclaration = {}) {
     started = true
     startKoin {
         appDeclaration()
-        modules(platformModule(), dataModule)
+        modules(platformModule(), dataModule, uiModule)
     }
 }
