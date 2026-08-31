@@ -48,12 +48,19 @@ fun buildSeed(seed: Int = 42): SeedBundle {
     val timeCount = 200
 
     val slots = ArrayList<Slot>(timeCount * 2)
+    val reservations = ArrayList<Reservation>()
+    var version = 1L
     var offset = 0
     for (i in 0 until timeCount) {
         val startsAt = base + offset.minutes
         val rate = rates[i % rates.size]
+        val density = when {
+            i < 24 -> 0.78
+            i < 80 -> 0.34
+            else -> 0.10
+        }
         for (sub in listOf(front, back)) {
-            slots += Slot(
+            val slot = Slot(
                 id = SlotId("slot-${sub.id.value}-$i"),
                 resourceId = resourceId,
                 subResourceId = sub.id,
@@ -61,48 +68,41 @@ fun buildSeed(seed: Int = 42): SeedBundle {
                 capacity = 6,
                 rate = rate,
             )
+            slots += slot
+            for (position in 0 until slot.capacity) {
+                if (random.nextDouble() >= density) continue
+                val roll = random.nextDouble()
+                val status = when {
+                    roll < 0.14 -> ReservationStatus.HELD
+                    roll < 0.72 -> ReservationStatus.CONFIRMED
+                    roll < 0.90 -> ReservationStatus.CHECKED_IN
+                    else -> ReservationStatus.NO_SHOW
+                }
+                val price = rate.priceMinorUnits
+                val paid = when {
+                    status == ReservationStatus.HELD -> 0L
+                    random.nextDouble() < 0.22 -> ((price * (0.3 + random.nextDouble() * 0.4)).toLong() / 100) * 100
+                    else -> price
+                }
+                reservations += Reservation(
+                    id = ReservationId("resv-${slot.id.value}-$position"),
+                    slotId = slot.id,
+                    position = position,
+                    partySize = 1 + random.nextInt(4),
+                    holderName = holderNames[random.nextInt(holderNames.size)],
+                    isGuest = random.nextInt(100) < 35,
+                    duration = if (random.nextDouble() < 0.72) DurationCode.EIGHTEEN else DurationCode.NINE,
+                    rateCode = rate.code,
+                    priceMinorUnits = price,
+                    paidMinorUnits = paid,
+                    bookedOnline = random.nextInt(100) < 45,
+                    hasCart = random.nextInt(100) < 30,
+                    status = status,
+                    version = version++,
+                )
+            }
         }
         offset += gaps[i % gaps.size]
-    }
-
-    val statuses = listOf(
-        ReservationStatus.HELD,
-        ReservationStatus.CONFIRMED,
-        ReservationStatus.CONFIRMED,
-        ReservationStatus.CHECKED_IN,
-        ReservationStatus.NO_SHOW,
-        ReservationStatus.CANCELLED,
-    )
-    val reservations = ArrayList<Reservation>()
-    var version = 1L
-    for (slot in slots) {
-        for (position in 0 until slot.capacity) {
-            if (random.nextInt(100) >= 32) continue
-            val status = statuses[random.nextInt(statuses.size)]
-            val price = slot.rate.priceMinorUnits
-            val paid = when {
-                status == ReservationStatus.CHECKED_IN -> price
-                random.nextInt(100) < 18 -> price / 2
-                random.nextInt(100) < 40 -> price
-                else -> 0L
-            }
-            reservations += Reservation(
-                id = ReservationId("resv-${slot.id.value}-$position"),
-                slotId = slot.id,
-                position = position,
-                partySize = 1 + random.nextInt(4),
-                holderName = holderNames[random.nextInt(holderNames.size)],
-                isGuest = random.nextInt(100) < 35,
-                duration = if (random.nextBoolean()) DurationCode.EIGHTEEN else DurationCode.NINE,
-                rateCode = slot.rate.code,
-                priceMinorUnits = price,
-                paidMinorUnits = paid,
-                bookedOnline = random.nextInt(100) < 45,
-                hasCart = random.nextInt(100) < 25,
-                status = status,
-                version = version++,
-            )
-        }
     }
     return SeedBundle(listOf(resource), slots, reservations)
 }

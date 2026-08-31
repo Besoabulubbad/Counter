@@ -170,7 +170,7 @@ private fun DrawScope.drawCellCues(reservation: Reservation) {
             )
         }
         ReservationStatus.CHECKED_IN -> {
-            drawRect(color = CounterColors.CheckedInEdge, size = Size(4.dp.toPx(), size.height))
+            drawRect(color = CounterColors.CheckedInEdge, size = Size(6.dp.toPx(), size.height))
         }
         ReservationStatus.NO_SHOW -> {
             clipRect {

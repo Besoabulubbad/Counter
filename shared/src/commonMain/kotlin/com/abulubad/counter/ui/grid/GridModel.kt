@@ -36,8 +36,15 @@ fun buildGrid(
 ): GridUiState {
     if (slots.isEmpty()) return GridUiState.Empty
     val bySlot = reservations.groupBy { it.slotId }
+    val subRank = subLabels.keys.withIndex().associate { (index, key) -> key to index }
     val rows = slots
-        .sortedWith(compareBy({ it.startsAt }, { it.subResourceId?.value ?: "" }, { it.id.value }))
+        .sortedWith(
+            compareBy(
+                { it.startsAt },
+                { subRank[it.subResourceId?.value] ?: Int.MAX_VALUE },
+                { it.id.value },
+            ),
+        )
         .map { slot ->
             val byPosition = bySlot[slot.id].orEmpty().associateBy { it.position }
             GridRow(
