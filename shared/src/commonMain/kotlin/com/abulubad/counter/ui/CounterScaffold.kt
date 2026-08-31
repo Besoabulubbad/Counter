@@ -1,6 +1,7 @@
 package com.abulubad.counter.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.runtime.Composable
@@ -27,6 +29,7 @@ import com.abulubad.counter.ui.theme.LocalCounterDimens
 fun CounterScaffold(
     chrome: @Composable RowScope.() -> Unit,
     modifier: Modifier = Modifier,
+    actionBar: (@Composable RowScope.() -> Unit)? = null,
     body: @Composable () -> Unit,
 ) {
     val dimens = LocalCounterDimens.current
@@ -45,10 +48,30 @@ fun CounterScaffold(
         Box(
             Modifier.weight(1f).fillMaxWidth()
                 .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+                    WindowInsets.safeDrawing.only(
+                        if (actionBar == null) {
+                            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
+                        } else {
+                            WindowInsetsSides.Horizontal
+                        },
+                    ),
                 ),
         ) {
             body()
+        }
+        if (actionBar != null) {
+            Column(Modifier.fillMaxWidth().background(CounterColors.Chrome)) {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                        .height(dimens.actionBarHeight)
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    content = actionBar,
+                )
+                Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.safeDrawing))
+            }
         }
     }
 }

@@ -124,9 +124,24 @@ private fun CancelledContent(reservation: Reservation) {
     )
 }
 
-private fun durationLabel(duration: DurationCode): String = when (duration) {
+internal fun durationLabel(duration: DurationCode): String = when (duration) {
     DurationCode.NINE -> "9H"
     DurationCode.EIGHTEEN -> "18H"
+}
+
+internal fun statusLabel(status: ReservationStatus): String = when (status) {
+    ReservationStatus.HELD -> "Held"
+    ReservationStatus.CONFIRMED -> "Confirmed"
+    ReservationStatus.CHECKED_IN -> "Checked in"
+    ReservationStatus.NO_SHOW -> "No show"
+    ReservationStatus.CANCELLED -> "Cancelled"
+}
+
+internal fun chipColor(status: ReservationStatus): Color = when (status) {
+    ReservationStatus.HELD -> CounterColors.Held
+    ReservationStatus.CONFIRMED, ReservationStatus.CHECKED_IN -> CounterColors.Confirmed
+    ReservationStatus.NO_SHOW -> CounterColors.NoShow
+    ReservationStatus.CANCELLED -> CounterColors.InkMuted
 }
 
 private fun fillFor(reservation: Reservation?): Color = when (reservation?.status) {

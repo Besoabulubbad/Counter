@@ -194,7 +194,7 @@ private fun GridBody(state: GridUiState, scrollX: MutableState<Float>, scrollY: 
     }
 }
 
-private fun formatSlotTime(instant: Instant): String {
+internal fun formatSlotTime(instant: Instant): String {
     val time = instant.toLocalDateTime(TimeZone.currentSystemDefault())
     return time.hour.toString().padStart(2, '0') + ":" + time.minute.toString().padStart(2, '0')
 }
