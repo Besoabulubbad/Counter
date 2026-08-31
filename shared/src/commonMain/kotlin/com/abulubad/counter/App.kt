@@ -14,49 +14,67 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.abulubad.counter.data.CounterRepository
+import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterTheme
 import com.abulubad.counter.ui.theme.CounterType
 import com.abulubad.counter.ui.theme.LocalCounterDimens
 import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
+import org.koin.compose.koinInject
 
 @Composable
 fun App() {
     CounterTheme {
-        val dimens = LocalCounterDimens.current
-        Column(Modifier.fillMaxSize().background(CounterColors.Surface)) {
-            Row(
-                Modifier.fillMaxWidth()
-                    .height(dimens.chromeHeight)
-                    .background(CounterColors.Chrome)
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    "Counter",
-                    color = CounterColors.OnChrome,
-                    fontFamily = PlexSans,
-                    fontSize = CounterType.emphasis,
-                    fontWeight = FontWeight.Medium,
-                )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    "theme preview",
-                    color = CounterColors.OnChromeMuted,
-                    fontFamily = PlexSans,
-                    fontSize = CounterType.micro,
-                )
-            }
+        CounterShell()
+    }
+}
 
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                StateSwatches()
-            }
+@Composable
+private fun CounterShell() {
+    val repo = koinInject<CounterRepository>()
+    LaunchedEffect(repo) { repo.seedIfEmpty() }
+    val slots by remember(repo) { repo.slots() }.collectAsState(emptyList())
+    val reservations by remember(repo) { repo.reservations() }.collectAsState(emptyList())
+    val booked = reservations.count { it.status != ReservationStatus.CANCELLED }
+    val dimens = LocalCounterDimens.current
+
+    Column(Modifier.fillMaxSize().background(CounterColors.Surface)) {
+        Row(
+            Modifier.fillMaxWidth()
+                .height(dimens.chromeHeight)
+                .background(CounterColors.Chrome)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Counter",
+                color = CounterColors.OnChrome,
+                fontFamily = PlexSans,
+                fontSize = CounterType.emphasis,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                "slots ${slots.size}   booked $booked",
+                color = CounterColors.OnChromeMuted,
+                fontFamily = PlexMono,
+                fontSize = CounterType.micro,
+            )
+        }
+
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            StateSwatches()
         }
     }
 }
