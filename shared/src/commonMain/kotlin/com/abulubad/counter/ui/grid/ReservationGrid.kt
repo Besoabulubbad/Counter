@@ -41,7 +41,12 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
 @Composable
-fun ReservationGrid(state: GridUiState, modifier: Modifier = Modifier) {
+fun ReservationGrid(
+    state: GridUiState,
+    onSelect: (GridRow, Int) -> Unit,
+    selected: Pair<GridRow, Int>?,
+    modifier: Modifier = Modifier,
+) {
     val dimens = LocalCounterDimens.current
     val scrollX = remember { mutableStateOf(0f) }
     val scrollY = remember { mutableStateOf(0f) }
@@ -57,7 +62,7 @@ fun ReservationGrid(state: GridUiState, modifier: Modifier = Modifier) {
         }
         Row(Modifier.weight(1f)) {
             TimeColumn(state.rows, scrollY, Modifier.width(dimens.timeColWidth).fillMaxHeight().clipToBounds())
-            GridBody(state, scrollX, scrollY, Modifier.weight(1f).fillMaxHeight().clipToBounds())
+            GridBody(state, onSelect, selected, scrollX, scrollY, Modifier.weight(1f).fillMaxHeight().clipToBounds())
         }
     }
 }
@@ -132,7 +137,14 @@ private fun TimeColumn(rows: List<GridRow>, scrollY: MutableState<Float>, modifi
 }
 
 @Composable
-private fun GridBody(state: GridUiState, scrollX: MutableState<Float>, scrollY: MutableState<Float>, modifier: Modifier) {
+private fun GridBody(
+    state: GridUiState,
+    onSelect: (GridRow, Int) -> Unit,
+    selected: Pair<GridRow, Int>?,
+    scrollX: MutableState<Float>,
+    scrollY: MutableState<Float>,
+    modifier: Modifier,
+) {
     val dimens = LocalCounterDimens.current
     val density = LocalDensity.current
     BoxWithConstraints(modifier) {
@@ -177,9 +189,11 @@ private fun GridBody(state: GridUiState, scrollX: MutableState<Float>, scrollY: 
                 val gridRow = state.rows[row]
                 for (col in firstCol..lastCol) {
                     GridCell(
-                        gridRow.cells.getOrNull(col),
-                        gridRow.slot.rate.currency,
-                        Modifier
+                        reservation = gridRow.cells.getOrNull(col),
+                        currency = gridRow.slot.rate.currency,
+                        selected = selected?.let { it.first.slot.id == gridRow.slot.id && it.second == col } ?: false,
+                        onClick = { onSelect(gridRow, col) },
+                        modifier = Modifier
                             .offset {
                                 IntOffset(
                                     (col * cellW - scrollX.value).roundToInt(),

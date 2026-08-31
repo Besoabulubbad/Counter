@@ -1,6 +1,7 @@
 package com.abulubad.counter.ui.grid
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -36,7 +38,13 @@ import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
 
 @Composable
-internal fun GridCell(reservation: Reservation?, currency: String, modifier: Modifier) {
+internal fun GridCell(
+    reservation: Reservation?,
+    currency: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     DisposableEffect(Unit) {
         RecompositionStats.enter()
         onDispose { RecompositionStats.leave() }
@@ -44,10 +52,12 @@ internal fun GridCell(reservation: Reservation?, currency: String, modifier: Mod
     Box(
         modifier
             .background(fillFor(reservation))
+            .clickable(onClick = onClick)
             .drawWithContent {
                 if (reservation != null) drawCellCues(reservation)
                 drawContent()
                 drawSeams()
+                if (selected) drawCursor()
             },
         contentAlignment = Alignment.CenterStart,
     ) {
@@ -149,6 +159,16 @@ private fun fillFor(reservation: Reservation?): Color = when (reservation?.statu
     ReservationStatus.HELD -> CounterColors.Held
     ReservationStatus.NO_SHOW -> CounterColors.NoShow
     ReservationStatus.CONFIRMED, ReservationStatus.CHECKED_IN -> CounterColors.Confirmed
+}
+
+private fun DrawScope.drawCursor() {
+    val w = 2.dp.toPx()
+    drawRect(
+        color = CounterColors.Ink,
+        topLeft = Offset(w / 2, w / 2),
+        size = Size(size.width - w, size.height - w),
+        style = Stroke(width = w),
+    )
 }
 
 private fun DrawScope.drawSeams() {

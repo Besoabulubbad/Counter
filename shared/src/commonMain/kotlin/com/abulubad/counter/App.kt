@@ -2,10 +2,15 @@ package com.abulubad.counter
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -16,6 +21,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abulubad.counter.ui.CounterScaffold
@@ -23,12 +30,16 @@ import com.abulubad.counter.ui.LocalPane
 import com.abulubad.counter.ui.NavButton
 import com.abulubad.counter.ui.Pane
 import com.abulubad.counter.ui.PayButton
-import com.abulubad.counter.ui.paneFor
 import com.abulubad.counter.ui.grid.CountersStrip
+import com.abulubad.counter.ui.grid.DetailPanel
+import com.abulubad.counter.ui.grid.GridRow
+import com.abulubad.counter.ui.grid.GridUiState
 import com.abulubad.counter.ui.grid.GridViewModel
 import com.abulubad.counter.ui.grid.ReservationGrid
 import com.abulubad.counter.ui.grid.ReservationList
+import com.abulubad.counter.ui.grid.SlotSheet
 import com.abulubad.counter.ui.grid.ViewMode
+import com.abulubad.counter.ui.paneFor
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterTheme
 import com.abulubad.counter.ui.theme.CounterType
@@ -46,15 +57,20 @@ fun App() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CounterShell() {
-    val compact = LocalPane.current == Pane.Compact
+    val pane = LocalPane.current
+    val compact = pane == Pane.Compact
+    val expanded = pane == Pane.Expanded
     val viewModel = koinInject<GridViewModel>()
     LaunchedEffect(viewModel) { viewModel.seed() }
     val state by viewModel.state.collectAsState()
     var viewMode by remember(compact) { mutableStateOf(if (compact) ViewMode.List else ViewMode.Grid) }
+    var selected by remember { mutableStateOf<Pair<GridRow, Int>?>(null) }
+    val onSelect: (GridRow, Int) -> Unit = { row, position -> selected = row to position }
 
-    val toggle: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {
+    val toggle: @Composable RowScope.() -> Unit = {
         NavButton("Grid", active = viewMode == ViewMode.Grid) { viewMode = ViewMode.Grid }
         NavButton("List", active = viewMode == ViewMode.List) { viewMode = ViewMode.List }
     }
@@ -85,12 +101,41 @@ private fun CounterShell() {
             null
         },
     ) {
-        Column(Modifier.fillMaxSize()) {
-            CountersStrip(state.counters, Modifier.fillMaxWidth())
-            when (viewMode) {
-                ViewMode.Grid -> ReservationGrid(state, Modifier.weight(1f).fillMaxWidth())
-                ViewMode.List -> ReservationList(state, Modifier.weight(1f).fillMaxWidth())
+        if (expanded) {
+            Row(Modifier.fillMaxSize()) {
+                GridArea(state, viewMode, onSelect, selected, Modifier.weight(1f).fillMaxHeight())
+                DetailPanel(selected?.first, selected?.second ?: 0, Modifier.width(340.dp).fillMaxHeight())
             }
+        } else {
+            GridArea(state, viewMode, onSelect, selected, Modifier.fillMaxSize())
+            selected?.let { sel ->
+                ModalBottomSheet(
+                    onDismissRequest = { selected = null },
+                    shape = RectangleShape,
+                    containerColor = CounterColors.Surface,
+                    scrimColor = Color.Black.copy(alpha = 0.45f),
+                    dragHandle = null,
+                ) {
+                    SlotSheet(sel.first, sel.second, Modifier.fillMaxWidth())
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GridArea(
+    state: GridUiState,
+    viewMode: ViewMode,
+    onSelect: (GridRow, Int) -> Unit,
+    selected: Pair<GridRow, Int>?,
+    modifier: Modifier,
+) {
+    Column(modifier) {
+        CountersStrip(state.counters, Modifier.fillMaxWidth())
+        when (viewMode) {
+            ViewMode.Grid -> ReservationGrid(state, onSelect, selected, Modifier.weight(1f).fillMaxWidth())
+            ViewMode.List -> ReservationList(state, onSelect, Modifier.weight(1f).fillMaxWidth())
         }
     }
 }

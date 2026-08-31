@@ -2,6 +2,7 @@ package com.abulubad.counter.ui.grid
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -55,12 +56,16 @@ private val ColPrice = 96.dp
 private val ColBalance = 120.dp
 
 @Composable
-fun ReservationList(state: GridUiState, modifier: Modifier = Modifier) {
+fun ReservationList(
+    state: GridUiState,
+    onSelect: (GridRow, Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     BoxWithConstraints(modifier.fillMaxSize()) {
         if (maxWidth >= 760.dp) {
-            WideList(state, Modifier.fillMaxSize())
+            WideList(state, onSelect, Modifier.fillMaxSize())
         } else {
-            PhoneList(state, Modifier.fillMaxSize())
+            PhoneList(state, onSelect, Modifier.fillMaxSize())
         }
     }
 }
@@ -77,7 +82,7 @@ private fun booked(row: GridRow): List<Pair<Int, Reservation>> =
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PhoneList(state: GridUiState, modifier: Modifier) {
+private fun PhoneList(state: GridUiState, onSelect: (GridRow, Int) -> Unit, modifier: Modifier) {
     val groups = remember(state) { state.rows.map { it to booked(it) }.filter { it.second.isNotEmpty() } }
     val rowHeight = LocalCounterDimens.current.rowHeight
     LazyColumn(modifier.fillMaxWidth().background(CounterColors.Surface)) {
@@ -86,7 +91,7 @@ private fun PhoneList(state: GridUiState, modifier: Modifier) {
                 SlotHeader(row, reservations.size)
             }
             items(reservations, key = { it.second.id.value }) { (pos, res) ->
-                PhoneRow(row, pos, res, rowHeight)
+                PhoneRow(row, pos, res, rowHeight, onSelect)
             }
         }
     }
@@ -108,16 +113,18 @@ private fun SlotHeader(row: GridRow, bookedCount: Int) {
 }
 
 @Composable
-private fun PhoneRow(row: GridRow, position: Int, r: Reservation, rowHeight: Dp) {
+private fun PhoneRow(row: GridRow, position: Int, r: Reservation, rowHeight: Dp, onSelect: (GridRow, Int) -> Unit) {
     val balance = r.priceMinorUnits - r.paidMinorUnits
     val currency = row.slot.rate.currency
     Row(
-        Modifier.fillMaxWidth().height(rowHeight).bottomRule(CounterColors.RuleFaint),
+        Modifier.fillMaxWidth().height(rowHeight).bottomRule(CounterColors.RuleFaint)
+            .clickable { onSelect(row, position) }
+            .padding(start = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(4.dp).fillMaxHeight().background(chipColor(r.status)))
         Column(
-            Modifier.weight(1f).padding(horizontal = 12.dp),
+            Modifier.weight(1f).padding(start = 10.dp, end = 14.dp),
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -150,7 +157,7 @@ private fun PhoneRow(row: GridRow, position: Int, r: Reservation, rowHeight: Dp)
     }
 }
 
-private fun statusWord(status: ReservationStatus): String? = when (status) {
+internal fun statusWord(status: ReservationStatus): String? = when (status) {
     ReservationStatus.CONFIRMED -> null
     else -> statusLabel(status)
 }
@@ -158,7 +165,7 @@ private fun statusWord(status: ReservationStatus): String? = when (status) {
 private fun moneyLabel(balance: Long, currency: String): String =
     if (balance == 0L) "paid" else "due ${formatCurrency(balance, currency)}"
 
-private fun metaLine(r: Reservation): String {
+internal fun metaLine(r: Reservation): String {
     val parts = mutableListOf("${r.partySize} up", durationLabel(r.duration), r.rateCode)
     if (r.hasCart) parts.add("cart")
     return parts.joinToString(" · ")
@@ -167,14 +174,14 @@ private fun metaLine(r: Reservation): String {
 // -- Wide: columnar table --
 
 @Composable
-private fun WideList(state: GridUiState, modifier: Modifier) {
+private fun WideList(state: GridUiState, onSelect: (GridRow, Int) -> Unit, modifier: Modifier) {
     val entries = remember(state) { flatten(state) }
     val dimens = LocalCounterDimens.current
     Column(modifier.fillMaxWidth().background(CounterColors.Surface)) {
         WideHeader()
         LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
             items(entries, key = { it.reservation.id.value }) { entry ->
-                WideRow(entry, dimens.rowHeight)
+                WideRow(entry, dimens.rowHeight, onSelect)
             }
         }
     }
@@ -205,12 +212,13 @@ private fun HeaderLabel(text: String, modifier: Modifier, align: TextAlign = Tex
 }
 
 @Composable
-private fun WideRow(entry: ListEntry, rowHeight: Dp) {
+private fun WideRow(entry: ListEntry, rowHeight: Dp, onSelect: (GridRow, Int) -> Unit) {
     val r = entry.reservation
     val balance = r.priceMinorUnits - r.paidMinorUnits
     val currency = entry.row.slot.rate.currency
     Row(
-        Modifier.fillMaxWidth().height(rowHeight).bottomRule(CounterColors.RuleFaint),
+        Modifier.fillMaxWidth().height(rowHeight).bottomRule(CounterColors.RuleFaint)
+            .clickable { onSelect(entry.row, entry.position) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Mono(formatSlotTime(entry.row.slot.startsAt), Modifier.width(ColTime).padding(start = 12.dp))
@@ -258,7 +266,7 @@ private fun Sans(text: String, modifier: Modifier, color: Color) {
     Text(text, modifier = modifier, color = color, fontFamily = PlexSans, fontSize = CounterType.body)
 }
 
-private fun Modifier.bottomRule(color: Color): Modifier = drawBehind {
+internal fun Modifier.bottomRule(color: Color): Modifier = drawBehind {
     val y = size.height - 1.dp.toPx()
     drawLine(color, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
 }
