@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abulubad.counter.data.CounterRepository
 import com.abulubad.counter.domain.ReservationStatus
+import com.abulubad.counter.platform.formatCurrency
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterTheme
 import com.abulubad.counter.ui.theme.CounterType
@@ -116,7 +117,7 @@ private fun SwatchRow(label: String, fill: Color, ink: Color) {
         }
         Spacer(Modifier.width(12.dp))
         Text(
-            "$120.00",
+            formatCurrency(12000, "USD"),
             color = CounterColors.Ink,
             fontFamily = PlexMono,
             fontSize = CounterType.body,
