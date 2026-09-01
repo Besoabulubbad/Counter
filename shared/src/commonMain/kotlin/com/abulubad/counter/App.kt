@@ -96,7 +96,7 @@ private fun CounterShell() {
     var selectedKey by remember { mutableStateOf<Pair<String, Int>?>(null) }
     val onSelect: (GridRow, Int) -> Unit = { row, position -> selectedKey = row.slot.id.value to position }
     val onAdvance: (Reservation) -> Unit = { viewModel.advance(it) }
-    val onAddItem: (OrderItem) -> Unit = { viewModel.addItemToTicket(it.name, it.priceMinorUnits, it.sku) }
+    val onAddItem: (OrderItem) -> Unit = { viewModel.addItemToTicket(it.name, it.priceMinorUnits, it.sku, it.stock == 0) }
     var cutId by remember { mutableStateOf<String?>(null) }
     val onCut: (Reservation) -> Unit = { cutId = it.id.value }
     val onCancelCut: () -> Unit = { cutId = null }

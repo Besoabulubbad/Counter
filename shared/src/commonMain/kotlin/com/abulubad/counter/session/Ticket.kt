@@ -10,6 +10,7 @@ data class TicketLine(
     val amountMinorUnits: Long,
     val origin: String,
     val currency: String,
+    val oversold: Boolean = false,
 )
 
 class Ticket {
@@ -17,8 +18,8 @@ class Ticket {
     private val _lines = MutableStateFlow<List<TicketLine>>(emptyList())
     val lines: StateFlow<List<TicketLine>> = _lines
 
-    fun add(label: String, qty: Int, amountMinorUnits: Long, origin: String, currency: String) {
-        _lines.value = _lines.value + TicketLine("line-${counter++}", label, qty, amountMinorUnits, origin, currency)
+    fun add(label: String, qty: Int, amountMinorUnits: Long, origin: String, currency: String, oversold: Boolean = false) {
+        _lines.value = _lines.value + TicketLine("line-${counter++}", label, qty, amountMinorUnits, origin, currency, oversold)
     }
 
     fun clear() {

@@ -59,8 +59,8 @@ class GridViewModel(
     fun addToTicket(reservation: Reservation) =
         ticket.add("Green fee · ${reservation.holderName}", 1, reservation.priceMinorUnits, "from grid", "USD")
 
-    fun addItemToTicket(name: String, priceMinorUnits: Long, sku: String) =
-        ticket.add(name, 1, priceMinorUnits, "from order · $sku", "USD")
+    fun addItemToTicket(name: String, priceMinorUnits: Long, sku: String, oversold: Boolean) =
+        ticket.add(name, 1, priceMinorUnits, "from order · $sku", "USD", oversold)
 
     val state: StateFlow<GridUiState> =
         combine(

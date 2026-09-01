@@ -31,6 +31,7 @@ import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterType
 import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
+import kotlin.time.Clock
 
 @Composable
 fun DetailPanel(
@@ -79,7 +80,12 @@ private fun TicketSection(lines: List<TicketLine>, total: Long) {
                     Text("${line.qty}", modifier = Modifier.width(16.dp), color = CounterColors.InkMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
                     Column(Modifier.weight(1f)) {
                         Text(line.label, color = CounterColors.Ink, fontFamily = PlexSans, fontSize = CounterType.body, maxLines = 1)
-                        Text(line.origin, color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.micro)
+                        Text(
+                            if (line.oversold) "${line.origin} · oversold" else line.origin,
+                            color = if (line.oversold) CounterColors.Conflict else CounterColors.InkMuted,
+                            fontFamily = PlexSans,
+                            fontSize = CounterType.micro,
+                        )
                     }
                     Text(formatCurrency(line.amountMinorUnits * line.qty, line.currency), color = CounterColors.Ink, fontFamily = PlexMono, fontSize = CounterType.body)
                 }
@@ -125,9 +131,12 @@ private fun SelectedDetail(row: GridRow, position: Int, onAdvance: (Reservation)
             ActionChip(primaryActionLabel(reservation.status), primary = true, Modifier.weight(1f)) { onAdvance(reservation) }
             ActionChip("Add to ticket", primary = false, Modifier.weight(1f)) { onAddToTicket(reservation) }
         }
-    } else {
+    } else if (row.slot.startsAt >= Clock.System.now()) {
         Spacer(Modifier.height(13.dp))
         ActionChip("Book walk-in", primary = true, Modifier.fillMaxWidth()) { onBook(row.slot, position) }
+    } else {
+        Spacer(Modifier.height(13.dp))
+        Text("Slot has passed", color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.body)
     }
 }
 

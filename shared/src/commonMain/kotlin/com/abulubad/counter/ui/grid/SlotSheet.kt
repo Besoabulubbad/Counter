@@ -26,6 +26,7 @@ import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterType
 import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
+import kotlin.time.Clock
 
 @Composable
 fun SlotSheet(row: GridRow, focusedPosition: Int, onAdvance: (Reservation) -> Unit, onBook: (Slot, Int) -> Unit, modifier: Modifier = Modifier) {
@@ -39,14 +40,15 @@ fun SlotSheet(row: GridRow, focusedPosition: Int, onAdvance: (Reservation) -> Un
             Text("$bookedCount of ${row.slot.capacity}", color = CounterColors.InkMuted, fontFamily = PlexMono, fontSize = CounterType.body)
         }
         Spacer(Modifier.height(14.dp))
+        val bookable = row.slot.startsAt >= Clock.System.now()
         for (pos in 0 until row.slot.capacity) {
-            PositionRow(row.cells.getOrNull(pos), pos, row.slot.rate.currency, focused = pos == focusedPosition, onAdvance = onAdvance, onBook = { onBook(row.slot, pos) })
+            PositionRow(row.cells.getOrNull(pos), pos, row.slot.rate.currency, focused = pos == focusedPosition, bookable = bookable, onAdvance = onAdvance, onBook = { onBook(row.slot, pos) })
         }
     }
 }
 
 @Composable
-private fun PositionRow(reservation: Reservation?, position: Int, currency: String, focused: Boolean, onAdvance: (Reservation) -> Unit, onBook: () -> Unit) {
+private fun PositionRow(reservation: Reservation?, position: Int, currency: String, focused: Boolean, bookable: Boolean, onAdvance: (Reservation) -> Unit, onBook: () -> Unit) {
     Column(
         Modifier.fillMaxWidth()
             .background(if (focused) CounterColors.SurfaceSunk else CounterColors.Surface)
@@ -84,8 +86,8 @@ private fun PositionRow(reservation: Reservation?, position: Int, currency: Stri
                 Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Open · add a walk-in", modifier = Modifier.weight(1f), color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.body)
-                PrimaryButton("Book walk-in") { onBook() }
+                Text(if (bookable) "Open · add a walk-in" else "Slot has passed", modifier = Modifier.weight(1f), color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.body)
+                if (bookable) PrimaryButton("Book walk-in") { onBook() }
             }
         }
     }
