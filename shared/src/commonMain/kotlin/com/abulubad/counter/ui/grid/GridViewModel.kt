@@ -2,12 +2,15 @@ package com.abulubad.counter.ui.grid
 
 import com.abulubad.counter.data.CounterRepository
 import com.abulubad.counter.domain.DurationCode
+import com.abulubad.counter.domain.Receipt
+import com.abulubad.counter.domain.ReceiptLine
 import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.domain.ReservationId
 import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.domain.Slot
 import com.abulubad.counter.domain.SlotId
 import com.abulubad.counter.domain.next
+import com.abulubad.counter.platform.ReceiptPrinter
 import com.abulubad.counter.session.Ticket
 import com.abulubad.counter.session.TicketLine
 import com.abulubad.counter.sync.ConflictInfo
@@ -26,6 +29,7 @@ class GridViewModel(
     private val repository: CounterRepository,
     private val syncEngine: SyncEngine,
     private val ticket: Ticket,
+    private val receiptPrinter: ReceiptPrinter,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -59,6 +63,20 @@ class GridViewModel(
 
     fun addItemToTicket(name: String, priceMinorUnits: Long, sku: String, oversold: Boolean) =
         ticket.add(name, 1, priceMinorUnits, "from order · $sku", "USD", oversold)
+
+    fun pay() {
+        val lines = ticket.lines.value
+        if (lines.isEmpty()) return
+        val receipt = Receipt(
+            title = "Counter",
+            lines = lines.map { ReceiptLine(it.label, it.amountMinorUnits * it.qty) },
+            totalMinorUnits = lines.sumOf { it.amountMinorUnits * it.qty },
+            currency = lines.first().currency,
+        )
+        scope.launch {
+            if (receiptPrinter.print(receipt).isSuccess) ticket.clear()
+        }
+    }
 
     val state: StateFlow<GridUiState> =
         combine(

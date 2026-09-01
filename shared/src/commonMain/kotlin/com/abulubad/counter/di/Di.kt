@@ -2,6 +2,7 @@ package com.abulubad.counter.di
 
 import com.abulubad.counter.data.CounterRepository
 import com.abulubad.counter.data.createCounterDatabase
+import com.abulubad.counter.platform.ReceiptPrinter
 import com.abulubad.counter.session.Ticket
 import com.abulubad.counter.sync.FakeBackend
 import com.abulubad.counter.sync.SyncEngine
@@ -19,10 +20,11 @@ val dataModule = module {
     single { FakeBackend() }
     single { SyncEngine(get(), get()) }
     single { Ticket() }
+    single { ReceiptPrinter() }
 }
 
 val uiModule = module {
-    single { GridViewModel(get(), get(), get()) }
+    single { GridViewModel(get(), get(), get(), get()) }
 }
 
 private var started = false

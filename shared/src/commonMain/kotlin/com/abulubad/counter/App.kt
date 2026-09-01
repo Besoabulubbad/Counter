@@ -170,14 +170,14 @@ private fun CounterShell() {
                 }
                 toggle()
                 Spacer(Modifier.width(12.dp))
-                PayButton(payLabel)
+                PayButton(payLabel, viewModel::pay)
             }
         },
         actionBar = if (compact) {
             {
                 toggle()
                 Spacer(Modifier.weight(1f))
-                PayButton(payLabel)
+                PayButton(payLabel, viewModel::pay)
             }
         } else {
             null
