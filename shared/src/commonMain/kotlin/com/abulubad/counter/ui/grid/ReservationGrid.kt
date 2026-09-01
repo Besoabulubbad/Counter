@@ -36,6 +36,7 @@ import com.abulubad.counter.ui.theme.LocalCounterDimens
 import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
 import kotlin.math.roundToInt
+import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -160,6 +161,15 @@ private fun GridBody(
         LaunchedEffect(maxX, maxY) {
             scrollX.value = scrollX.value.coerceIn(0f, maxX)
             scrollY.value = scrollY.value.coerceIn(0f, maxY)
+        }
+
+        val scrolledToNow = remember { mutableStateOf(false) }
+        LaunchedEffect(state.rows.size) {
+            if (!scrolledToNow.value && state.rows.isNotEmpty()) {
+                val index = state.rows.indexOfFirst { it.slot.startsAt >= Clock.System.now() }
+                if (index > 0) scrollY.value = (index * rowH).coerceIn(0f, maxY)
+                scrolledToNow.value = true
+            }
         }
 
         LaunchedEffect(selected) {

@@ -12,10 +12,12 @@ import com.abulubad.counter.domain.SlotId
 import com.abulubad.counter.domain.SubResource
 import com.abulubad.counter.domain.SubResourceId
 import kotlin.random.Random
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 
 data class SeedBundle(
     val resources: List<Resource>,
@@ -43,7 +45,8 @@ fun buildSeed(seed: Int = 42): SeedBundle {
     val resource = Resource(resourceId, "Riverbend", listOf(front, back))
 
     val zone = TimeZone.currentSystemDefault()
-    val base = LocalDateTime(2026, 3, 11, 6, 0).toInstant(zone)
+    val today = Clock.System.now().toLocalDateTime(zone)
+    val base = LocalDateTime(today.year, today.month, today.dayOfMonth, 6, 0).toInstant(zone)
     val gaps = intArrayOf(7, 8, 10, 7, 9, 11, 8, 12)
     val timeCount = 200
 
