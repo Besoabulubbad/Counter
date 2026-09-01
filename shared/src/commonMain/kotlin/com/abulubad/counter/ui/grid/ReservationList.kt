@@ -41,7 +41,7 @@ import com.abulubad.counter.ui.theme.LocalCounterDimens
 import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
 
-enum class ViewMode { Grid, List }
+enum class ViewMode { Grid, List, Order }
 
 private data class ListEntry(val row: GridRow, val position: Int, val reservation: Reservation)
 

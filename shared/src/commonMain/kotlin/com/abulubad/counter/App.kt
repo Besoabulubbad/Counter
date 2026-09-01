@@ -52,6 +52,8 @@ import com.abulubad.counter.ui.grid.ReservationGrid
 import com.abulubad.counter.ui.grid.ReservationList
 import com.abulubad.counter.ui.grid.SlotSheet
 import com.abulubad.counter.ui.grid.ViewMode
+import com.abulubad.counter.ui.order.OrderItem
+import com.abulubad.counter.ui.order.OrderScreen
 import com.abulubad.counter.ui.paneFor
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterTheme
@@ -90,6 +92,7 @@ private fun CounterShell() {
     var selectedKey by remember { mutableStateOf<Pair<String, Int>?>(null) }
     val onSelect: (GridRow, Int) -> Unit = { row, position -> selectedKey = row.slot.id.value to position }
     val onAdvance: (Reservation) -> Unit = { viewModel.advance(it) }
+    val onAddItem: (OrderItem) -> Unit = { viewModel.addItemToTicket(it.name, it.priceMinorUnits, it.sku) }
     val selectedRow = selectedKey?.let { key -> state.rows.find { it.slot.id.value == key.first } }
     val selectedPos = selectedKey?.second ?: 0
     val cursor = selectedRow?.let { it to selectedPos }
@@ -103,6 +106,7 @@ private fun CounterShell() {
     val toggle: @Composable RowScope.() -> Unit = {
         NavButton("Grid", active = viewMode == ViewMode.Grid) { viewMode = ViewMode.Grid }
         NavButton("List", active = viewMode == ViewMode.List) { viewMode = ViewMode.List }
+        NavButton("Order", active = viewMode == ViewMode.Order) { viewMode = ViewMode.Order }
     }
 
     CounterScaffold(
@@ -141,9 +145,15 @@ private fun CounterShell() {
         ) {
         if (expanded) {
             Row(Modifier.fillMaxSize()) {
-                GridArea(state, viewMode, onSelect, cursor, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.weight(1f).fillMaxHeight())
+                if (viewMode == ViewMode.Order) {
+                    OrderScreen(onAddItem, Modifier.weight(1f).fillMaxHeight())
+                } else {
+                    GridArea(state, viewMode, onSelect, cursor, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.weight(1f).fillMaxHeight())
+                }
                 DetailPanel(selectedRow, selectedPos, onAdvance, viewModel::addToTicket, ticketLines, ticketTotal, offline, outboxDepth, viewModel::toggleOffline, forceConflict, viewModel::toggleForceConflict, Modifier.width(340.dp).fillMaxHeight())
             }
+        } else if (viewMode == ViewMode.Order) {
+            OrderScreen(onAddItem, Modifier.fillMaxSize())
         } else {
             GridArea(state, viewMode, onSelect, cursor, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.fillMaxSize())
             if (selectedRow != null) {
@@ -222,6 +232,7 @@ private fun GridArea(
         when (viewMode) {
             ViewMode.Grid -> ReservationGrid(state, onSelect, selected, Modifier.weight(1f).fillMaxWidth())
             ViewMode.List -> ReservationList(state, onSelect, Modifier.weight(1f).fillMaxWidth())
+            ViewMode.Order -> Unit
         }
     }
 }
