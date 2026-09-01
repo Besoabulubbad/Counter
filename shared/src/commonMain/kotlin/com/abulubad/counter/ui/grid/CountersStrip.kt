@@ -2,17 +2,23 @@ package com.abulubad.counter.ui.grid
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abulubad.counter.ui.LocalPane
@@ -58,6 +64,64 @@ fun CountersStrip(counters: Counters, modifier: Modifier = Modifier) {
             CounterItem("open", counters.open)
         }
         Spacer(Modifier.weight(1f))
+        if (LocalPane.current == Pane.Expanded) {
+            Legend()
+        }
+    }
+}
+
+@Composable
+private fun Legend() {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        LegendItem("Open") {
+            drawRect(CounterColors.Surface)
+            drawRect(CounterColors.Rule, style = Stroke(1.dp.toPx()))
+        }
+        LegendItem("Held") {
+            drawRect(CounterColors.Held)
+            val x = 1.5.dp.toPx()
+            drawLine(
+                CounterColors.OnFill.copy(alpha = 0.8f),
+                Offset(x, 0f),
+                Offset(x, size.height),
+                strokeWidth = 3.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 2.dp.toPx())),
+            )
+        }
+        LegendItem("Confirmed") { drawRect(CounterColors.Confirmed) }
+        LegendItem("Checked in") {
+            drawRect(CounterColors.Confirmed)
+            drawRect(CounterColors.CheckedInEdge, size = Size(3.dp.toPx(), size.height))
+        }
+        LegendItem("No show") {
+            drawRect(CounterColors.NoShow)
+            val step = 3.dp.toPx()
+            var x = 0f
+            while (x < size.width + size.height) {
+                drawLine(
+                    CounterColors.OnFill.copy(alpha = 0.3f),
+                    Offset(x, size.height),
+                    Offset(x - size.height, 0f),
+                    strokeWidth = 1.dp.toPx(),
+                )
+                x += step
+            }
+        }
+        LegendItem("Partial") {
+            drawRect(CounterColors.Confirmed)
+            drawRect(CounterColors.Held, topLeft = Offset(0f, size.height - 2.dp.toPx()), size = Size(size.width, 2.dp.toPx()))
+        }
+    }
+}
+
+@Composable
+private fun LegendItem(label: String, draw: DrawScope.() -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.size(16.dp, 12.dp).drawBehind(draw))
+        Text(label, color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.micro)
     }
 }
 
