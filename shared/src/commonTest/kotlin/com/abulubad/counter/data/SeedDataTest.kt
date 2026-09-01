@@ -8,7 +8,7 @@ class SeedDataTest {
     @Test
     fun seedShapeIsStable() {
         val seed = buildSeed()
-        assertEquals(400, seed.slots.size)
+        assertEquals(180, seed.slots.size)
         assertEquals(1, seed.resources.size)
         assertEquals(2, seed.resources.single().subResources.size)
         assertTrue(seed.reservations.isNotEmpty())

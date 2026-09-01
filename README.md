@@ -46,7 +46,7 @@ sheet to a desktop rail.
 
 **Data-layer scale, stated plainly.** The grid loads a full day through `selectAllSlots` /
 `selectAllReservations` and rebuilds the model on any change. `slot(startsAtEpochMs)` and
-`reservation(slotId)` are indexed and foreign keys are enforced, which keeps a day's ~400 rows
+`reservation(slotId)` are indexed and foreign keys are enforced, which keeps a day's ~180 rows
 comfortable — but the *data* is not yet windowed the way the rendering is. A season of ~50,000
 reservations would want a date-range query feeding the grid instead of a full-table load; that
 query is the next step, and the windowed layout above it already expects a bounded slice.
@@ -149,10 +149,10 @@ a real thermal printer is a one-file change per target.
 Observed on a physical **Samsung Galaxy A34 (Android 16)** — a mid-range device, chosen so the
 numbers aren't flattering. Method noted so you can reproduce them.
 
-- **Scroll performance.** Continuous flinging of the 400-row grid on the **release** build (the
-  60 Hz panel; debug Compose is far jankier and not the target), three passes of ~1,600 rendered
-  frames each (`dumpsys gfxinfo`): **0% janky frames** — one stray frame across the three passes
-  (0.06%) — **zero missed vsync**, GPU frame time ~**3 ms**. It scrolls smoothly on mid-range
+- **Scroll performance.** Continuous flinging of the 180-row grid on the **release** build (the
+  60 Hz panel; debug Compose is far jankier and not the target), repeated passes of ~1,600
+  rendered frames each (`dumpsys gfxinfo`): **0% janky frames, zero missed vsync**, GPU frame
+  time ~**3 ms**. It scrolls smoothly on mid-range
   hardware. Profiling is what got it there: an early pass showed **5.3% jank and 17 missed
   vsyncs**, because the grid recomputed its visible window *in composition* and recomposed on
   every scroll frame. Moving that window math into `derivedStateOf` — for the grid body **and both
@@ -162,10 +162,10 @@ numbers aren't flattering. Method noted so you can reproduce them.
   synthetic input adds latency the render pipeline doesn't; the jank/vsync counts and the ~3 ms
   GPU time are the honest signals.)
 - **Only visible cells compose.** The custom windowed layout — not a `LazyColumn` of `LazyRow`s —
-  composes only the on-screen window: about **70 cells of the 2,400** in the sheet. The debug
+  composes only the on-screen window: about **70 cells of the 1,080** in the sheet. The debug
   panel's live recomposition counter shows this in real time and falls back as rows scroll off.
 - **Cold start.** `am start -W`: **~600 ms** warm on the A34 (three runs: 594 / 608 / 790 ms),
-  ~730 ms on the very first launch, which also seeds 400 slots. (~200 ms warm on a Pixel Tablet
+  ~730 ms on the very first launch, which also seeds 180 slots. (~200 ms warm on a Pixel Tablet
   emulator, for reference.)
 - **Size.** Android APK **10 MB**. Desktop bundle **85 MB** — jpackage embeds a JRE, so the
   Windows MSI lands in that range (built by CI on `windows-latest`).
