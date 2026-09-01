@@ -2,6 +2,7 @@ package com.abulubad.counter.ui.grid
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -232,6 +233,14 @@ private fun GridBody(
             }
         }
 
+        val rejectNotice = remember { mutableStateOf<String?>(null) }
+        LaunchedEffect(rejectNotice.value) {
+            if (rejectNotice.value != null) {
+                delay(1800)
+                rejectNotice.value = null
+            }
+        }
+
         if (state.rows.isEmpty()) return@BoxWithConstraints
         val lastPos = (state.positions - 1).coerceAtLeast(0)
         val firstRow by remember(rowH, bodyH, maxY, state.rows.size) {
@@ -263,8 +272,12 @@ private fun GridBody(
                             val col = ((current.pointer.x + scrollX.value) / cellW).toInt()
                             val rowIndex = ((current.pointer.y + scrollY.value) / rowH).toInt()
                             val target = state.rows.getOrNull(rowIndex)
-                            if (target != null && canMoveTo(target, col, Clock.System.now())) {
-                                onMove(current.reservation, target, col)
+                            if (target != null && col in 0..lastPos && target.cells.getOrNull(col)?.id != current.reservation.id) {
+                                when {
+                                    canMoveTo(target, col, Clock.System.now()) -> onMove(current.reservation, target, col)
+                                    target.cells.getOrNull(col) != null -> rejectNotice.value = "Position taken"
+                                    else -> rejectNotice.value = "Slot closed"
+                                }
                             }
                         }
                         drag.value = null
@@ -356,6 +369,16 @@ private fun GridBody(
                         fontWeight = FontWeight.Medium,
                     )
                 }
+            }
+        }
+        val notice = rejectNotice.value
+        if (notice != null) {
+            Box(
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp)
+                    .background(CounterColors.Conflict, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 16.dp, vertical = 9.dp),
+            ) {
+                Text(notice, color = CounterColors.OnFill, fontFamily = PlexSans, fontSize = CounterType.body, fontWeight = FontWeight.Medium)
             }
         }
     }
