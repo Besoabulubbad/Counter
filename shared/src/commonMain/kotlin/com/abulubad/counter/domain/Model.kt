@@ -33,6 +33,12 @@ enum class DurationCode { NINE, EIGHTEEN }
 
 enum class ReservationStatus { HELD, CONFIRMED, CHECKED_IN, NO_SHOW, CANCELLED }
 
+fun ReservationStatus.next(): ReservationStatus? = when (this) {
+    ReservationStatus.HELD -> ReservationStatus.CONFIRMED
+    ReservationStatus.CONFIRMED -> ReservationStatus.CHECKED_IN
+    else -> null
+}
+
 data class Reservation(
     val id: ReservationId,
     val slotId: SlotId,

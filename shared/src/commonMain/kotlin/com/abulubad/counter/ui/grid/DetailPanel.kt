@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.platform.formatCurrency
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterType
@@ -30,13 +31,13 @@ import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
 
 @Composable
-fun DetailPanel(row: GridRow?, position: Int, modifier: Modifier = Modifier) {
+fun DetailPanel(row: GridRow?, position: Int, onAdvance: (Reservation) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.background(CounterColors.SurfaceSunk).verticalScroll(rememberScrollState())) {
         Column(Modifier.fillMaxWidth().padding(15.dp)) {
             if (row == null) {
                 Text("Select a slot", color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.body)
             } else {
-                SelectedDetail(row, position)
+                SelectedDetail(row, position, onAdvance)
             }
         }
         DebugSection()
@@ -44,7 +45,7 @@ fun DetailPanel(row: GridRow?, position: Int, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun SelectedDetail(row: GridRow, position: Int) {
+private fun SelectedDetail(row: GridRow, position: Int, onAdvance: (Reservation) -> Unit) {
     val reservation = row.cells.getOrNull(position)
     val currency = row.slot.rate.currency
     Text("Selected", color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.micro)
@@ -70,10 +71,12 @@ private fun SelectedDetail(row: GridRow, position: Int) {
     Field("Paid", reservation?.let { formatCurrency(it.paidMinorUnits, currency) } ?: "—")
     Field("Source", reservation?.let { if (it.bookedOnline) "Online booking" else "Counter" } ?: "—")
     Field("Version", reservation?.version?.toString() ?: "—")
-    Spacer(Modifier.height(13.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ActionChip("Check in", primary = true, Modifier.weight(1f))
-        ActionChip("Add to ticket", primary = false, Modifier.weight(1f))
+    if (reservation != null) {
+        Spacer(Modifier.height(13.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ActionChip(primaryActionLabel(reservation.status), primary = true, Modifier.weight(1f)) { onAdvance(reservation) }
+            ActionChip("Add to ticket", primary = false, Modifier.weight(1f)) {}
+        }
     }
 }
 
@@ -86,10 +89,10 @@ private fun Field(label: String, value: String) {
 }
 
 @Composable
-private fun ActionChip(label: String, primary: Boolean, modifier: Modifier) {
+private fun ActionChip(label: String, primary: Boolean, modifier: Modifier, onClick: () -> Unit) {
     Box(
         modifier
-            .clickable {}
+            .clickable(onClick = onClick)
             .background(if (primary) CounterColors.Confirmed else CounterColors.Surface)
             .border(1.dp, if (primary) CounterColors.Confirmed else CounterColors.Rule)
             .padding(vertical = 9.dp),

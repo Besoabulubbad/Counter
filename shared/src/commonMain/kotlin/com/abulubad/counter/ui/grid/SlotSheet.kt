@@ -20,7 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abulubad.counter.domain.Reservation
-import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.platform.formatCurrency
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterType
@@ -28,7 +27,7 @@ import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
 
 @Composable
-fun SlotSheet(row: GridRow, focusedPosition: Int, modifier: Modifier = Modifier) {
+fun SlotSheet(row: GridRow, focusedPosition: Int, onAdvance: (Reservation) -> Unit, modifier: Modifier = Modifier) {
     val bookedCount = row.cells.count { it != null }
     Column(modifier.background(CounterColors.Surface).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -40,13 +39,13 @@ fun SlotSheet(row: GridRow, focusedPosition: Int, modifier: Modifier = Modifier)
         }
         Spacer(Modifier.height(14.dp))
         for (pos in 0 until row.slot.capacity) {
-            PositionRow(row.cells.getOrNull(pos), pos, row.slot.rate.currency, focused = pos == focusedPosition)
+            PositionRow(row.cells.getOrNull(pos), pos, row.slot.rate.currency, focused = pos == focusedPosition, onAdvance = onAdvance)
         }
     }
 }
 
 @Composable
-private fun PositionRow(reservation: Reservation?, position: Int, currency: String, focused: Boolean) {
+private fun PositionRow(reservation: Reservation?, position: Int, currency: String, focused: Boolean, onAdvance: (Reservation) -> Unit) {
     Column(
         Modifier.fillMaxWidth()
             .background(if (focused) CounterColors.SurfaceSunk else CounterColors.Surface)
@@ -77,16 +76,16 @@ private fun PositionRow(reservation: Reservation?, position: Int, currency: Stri
                     Text(moneyLine(reservation, currency), color = CounterColors.Ink, fontFamily = PlexSans, fontSize = CounterType.body, fontWeight = FontWeight.Medium)
                     Text("${sourceLabel(reservation)} · v${reservation.version}", color = CounterColors.InkMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
                 }
-                PrimaryButton(primaryAction(reservation.status))
+                PrimaryButton(primaryActionLabel(reservation.status)) { onAdvance(reservation) }
             }
         }
     }
 }
 
 @Composable
-private fun PrimaryButton(label: String) {
+private fun PrimaryButton(label: String, onClick: () -> Unit) {
     Box(
-        Modifier.clickable {}.background(CounterColors.Confirmed).padding(horizontal = 18.dp, vertical = 10.dp),
+        Modifier.clickable(onClick = onClick).background(CounterColors.Confirmed).padding(horizontal = 18.dp, vertical = 10.dp),
     ) {
         Text(label, color = CounterColors.Surface, fontFamily = PlexSans, fontSize = CounterType.body, fontWeight = FontWeight.Medium)
     }
@@ -98,11 +97,3 @@ private fun moneyLine(reservation: Reservation, currency: String): String {
 }
 
 private fun sourceLabel(reservation: Reservation): String = if (reservation.bookedOnline) "Online" else "Counter"
-
-private fun primaryAction(status: ReservationStatus): String = when (status) {
-    ReservationStatus.HELD -> "Confirm"
-    ReservationStatus.CONFIRMED -> "Check in"
-    ReservationStatus.CHECKED_IN -> "Add to ticket"
-    ReservationStatus.NO_SHOW -> "Rebook"
-    ReservationStatus.CANCELLED -> "Rebook"
-}

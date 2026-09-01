@@ -154,6 +154,13 @@ internal fun chipColor(status: ReservationStatus): Color = when (status) {
     ReservationStatus.CANCELLED -> CounterColors.InkMuted
 }
 
+internal fun primaryActionLabel(status: ReservationStatus): String = when (status) {
+    ReservationStatus.HELD -> "Confirm"
+    ReservationStatus.CONFIRMED -> "Check in"
+    ReservationStatus.CHECKED_IN -> "Add to ticket"
+    ReservationStatus.NO_SHOW, ReservationStatus.CANCELLED -> "Rebook"
+}
+
 private fun fillFor(reservation: Reservation?): Color = when (reservation?.status) {
     null, ReservationStatus.CANCELLED -> CounterColors.Surface
     ReservationStatus.HELD -> CounterColors.Held

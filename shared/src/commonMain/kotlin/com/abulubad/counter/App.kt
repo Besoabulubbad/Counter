@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.ui.CounterScaffold
 import com.abulubad.counter.ui.LocalPane
 import com.abulubad.counter.ui.NavButton
@@ -67,8 +68,12 @@ private fun CounterShell() {
     LaunchedEffect(viewModel) { viewModel.seed() }
     val state by viewModel.state.collectAsState()
     var viewMode by remember(compact) { mutableStateOf(if (compact) ViewMode.List else ViewMode.Grid) }
-    var selected by remember { mutableStateOf<Pair<GridRow, Int>?>(null) }
-    val onSelect: (GridRow, Int) -> Unit = { row, position -> selected = row to position }
+    var selectedKey by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    val onSelect: (GridRow, Int) -> Unit = { row, position -> selectedKey = row.slot.id.value to position }
+    val onAdvance: (Reservation) -> Unit = { viewModel.advance(it) }
+    val selectedRow = selectedKey?.let { key -> state.rows.find { it.slot.id.value == key.first } }
+    val selectedPos = selectedKey?.second ?: 0
+    val cursor = selectedRow?.let { it to selectedPos }
 
     val toggle: @Composable RowScope.() -> Unit = {
         NavButton("Grid", active = viewMode == ViewMode.Grid) { viewMode = ViewMode.Grid }
@@ -103,20 +108,20 @@ private fun CounterShell() {
     ) {
         if (expanded) {
             Row(Modifier.fillMaxSize()) {
-                GridArea(state, viewMode, onSelect, selected, Modifier.weight(1f).fillMaxHeight())
-                DetailPanel(selected?.first, selected?.second ?: 0, Modifier.width(340.dp).fillMaxHeight())
+                GridArea(state, viewMode, onSelect, cursor, Modifier.weight(1f).fillMaxHeight())
+                DetailPanel(selectedRow, selectedPos, onAdvance, Modifier.width(340.dp).fillMaxHeight())
             }
         } else {
-            GridArea(state, viewMode, onSelect, selected, Modifier.fillMaxSize())
-            selected?.let { sel ->
+            GridArea(state, viewMode, onSelect, cursor, Modifier.fillMaxSize())
+            if (selectedRow != null) {
                 ModalBottomSheet(
-                    onDismissRequest = { selected = null },
+                    onDismissRequest = { selectedKey = null },
                     shape = RectangleShape,
                     containerColor = CounterColors.Surface,
                     scrimColor = Color.Black.copy(alpha = 0.45f),
                     dragHandle = null,
                 ) {
-                    SlotSheet(sel.first, sel.second, Modifier.fillMaxWidth())
+                    SlotSheet(selectedRow, selectedPos, onAdvance, Modifier.fillMaxWidth())
                 }
             }
         }

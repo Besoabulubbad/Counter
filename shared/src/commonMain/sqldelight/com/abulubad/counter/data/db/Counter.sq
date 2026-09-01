@@ -78,3 +78,6 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 insertReservation:
 INSERT INTO reservation(id, slotId, position, partySize, holderName, isGuest, duration, rateCode, priceMinorUnits, paidMinorUnits, bookedOnline, hasCart, status, version)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateReservationStatus:
+UPDATE reservation SET status = ?, version = version + 1 WHERE id = ?;

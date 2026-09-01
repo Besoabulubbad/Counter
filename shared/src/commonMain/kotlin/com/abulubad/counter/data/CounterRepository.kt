@@ -4,6 +4,8 @@ import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import com.abulubad.counter.data.db.CounterDatabase
 import com.abulubad.counter.domain.Reservation
+import com.abulubad.counter.domain.ReservationId
+import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.domain.Resource
 import com.abulubad.counter.domain.Slot
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +30,10 @@ class CounterRepository(private val database: CounterDatabase) {
             queries.selectAllResources().asFlow().mapToList(Dispatchers.Default),
             queries.selectAllSubResources().asFlow().mapToList(Dispatchers.Default),
         ) { resources, subs -> resourcesToDomain(resources, subs) }
+
+    suspend fun setStatus(id: ReservationId, status: ReservationStatus) = withContext(Dispatchers.Default) {
+        queries.updateReservationStatus(status.name, id.value)
+    }
 
     suspend fun seedIfEmpty(bundle: SeedBundle = buildSeed()) = withContext(Dispatchers.Default) {
         if (queries.countSlots().executeAsOne() > 0L) return@withContext
