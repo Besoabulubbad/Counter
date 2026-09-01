@@ -1,8 +1,10 @@
 package com.abulubad.counter.ui.grid
 
 import com.abulubad.counter.data.CounterRepository
+import com.abulubad.counter.domain.DurationCode
 import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.domain.ReservationStatus
+import com.abulubad.counter.domain.Slot
 import com.abulubad.counter.domain.next
 import com.abulubad.counter.session.Ticket
 import com.abulubad.counter.session.TicketLine
@@ -79,5 +81,9 @@ class GridViewModel(
         } else if (reservation.status == ReservationStatus.CHECKED_IN) {
             addToTicket(reservation)
         }
+    }
+
+    fun book(slot: Slot, position: Int) {
+        scope.launch { repository.book(slot, position, "Walk-in", 1, DurationCode.EIGHTEEN) }
     }
 }

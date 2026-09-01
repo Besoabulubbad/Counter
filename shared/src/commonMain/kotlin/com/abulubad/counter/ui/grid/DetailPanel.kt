@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abulubad.counter.domain.Reservation
+import com.abulubad.counter.domain.Slot
 import com.abulubad.counter.platform.formatCurrency
 import com.abulubad.counter.session.TicketLine
 import com.abulubad.counter.ui.theme.CounterColors
@@ -37,6 +38,7 @@ fun DetailPanel(
     position: Int,
     onAdvance: (Reservation) -> Unit,
     onAddToTicket: (Reservation) -> Unit,
+    onBook: (Slot, Int) -> Unit,
     ticketLines: List<TicketLine>,
     ticketTotal: Long,
     offline: Boolean,
@@ -51,7 +53,7 @@ fun DetailPanel(
             if (row == null) {
                 Text("Select a slot", color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.body)
             } else {
-                SelectedDetail(row, position, onAdvance, onAddToTicket)
+                SelectedDetail(row, position, onAdvance, onAddToTicket, onBook)
             }
         }
         TicketSection(ticketLines, ticketTotal)
@@ -91,7 +93,7 @@ private fun TicketSection(lines: List<TicketLine>, total: Long) {
 }
 
 @Composable
-private fun SelectedDetail(row: GridRow, position: Int, onAdvance: (Reservation) -> Unit, onAddToTicket: (Reservation) -> Unit) {
+private fun SelectedDetail(row: GridRow, position: Int, onAdvance: (Reservation) -> Unit, onAddToTicket: (Reservation) -> Unit, onBook: (Slot, Int) -> Unit) {
     val reservation = row.cells.getOrNull(position)
     val currency = row.slot.rate.currency
     Text("Selected", color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.micro)
@@ -123,6 +125,9 @@ private fun SelectedDetail(row: GridRow, position: Int, onAdvance: (Reservation)
             ActionChip(primaryActionLabel(reservation.status), primary = true, Modifier.weight(1f)) { onAdvance(reservation) }
             ActionChip("Add to ticket", primary = false, Modifier.weight(1f)) { onAddToTicket(reservation) }
         }
+    } else {
+        Spacer(Modifier.height(13.dp))
+        ActionChip("Book walk-in", primary = true, Modifier.fillMaxWidth()) { onBook(row.slot, position) }
     }
 }
 

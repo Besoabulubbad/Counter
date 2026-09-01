@@ -150,7 +150,7 @@ private fun CounterShell() {
                 } else {
                     GridArea(state, viewMode, onSelect, cursor, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.weight(1f).fillMaxHeight())
                 }
-                DetailPanel(selectedRow, selectedPos, onAdvance, viewModel::addToTicket, ticketLines, ticketTotal, offline, outboxDepth, viewModel::toggleOffline, forceConflict, viewModel::toggleForceConflict, Modifier.width(340.dp).fillMaxHeight())
+                DetailPanel(selectedRow, selectedPos, onAdvance, viewModel::addToTicket, viewModel::book, ticketLines, ticketTotal, offline, outboxDepth, viewModel::toggleOffline, forceConflict, viewModel::toggleForceConflict, Modifier.width(340.dp).fillMaxHeight())
             }
         } else if (viewMode == ViewMode.Order) {
             OrderScreen(onAddItem, Modifier.fillMaxSize())
@@ -164,7 +164,7 @@ private fun CounterShell() {
                     scrimColor = Color.Black.copy(alpha = 0.45f),
                     dragHandle = null,
                 ) {
-                    SlotSheet(selectedRow, selectedPos, onAdvance, Modifier.fillMaxWidth())
+                    SlotSheet(selectedRow, selectedPos, onAdvance, viewModel::book, Modifier.fillMaxWidth())
                 }
             }
         }

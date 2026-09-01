@@ -16,7 +16,12 @@ class FakeBackend {
     suspend fun apply(entry: OutboxEntry): SyncResult {
         delay(latencyMillis)
         if (!forceConflict) return SyncResult.Applied
-        val input = SyncJson.decodeFromString<AdvanceStatusInput>(entry.payload)
-        return SyncResult.Conflict(serverVersion = input.expectedVersion + 1)
+        return when (entry.operation) {
+            MutationAdvanceStatus -> {
+                val input = SyncJson.decodeFromString<AdvanceStatusInput>(entry.payload)
+                SyncResult.Conflict(serverVersion = input.expectedVersion + 1)
+            }
+            else -> SyncResult.Applied
+        }
     }
 }

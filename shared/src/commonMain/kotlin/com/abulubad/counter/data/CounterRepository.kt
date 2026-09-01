@@ -5,13 +5,16 @@ import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOne
 import com.abulubad.counter.data.db.CounterDatabase
 import com.abulubad.counter.data.db.OutboxEntry
+import com.abulubad.counter.domain.DurationCode
 import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.domain.ReservationId
 import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.domain.Resource
 import com.abulubad.counter.domain.Slot
 import com.abulubad.counter.sync.AdvanceStatusInput
+import com.abulubad.counter.sync.BookInput
 import com.abulubad.counter.sync.MutationAdvanceStatus
+import com.abulubad.counter.sync.MutationBook
 import com.abulubad.counter.sync.SyncJson
 import kotlin.time.Clock
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +46,32 @@ class CounterRepository(private val database: CounterDatabase) {
         queries.transaction {
             queries.updateReservationStatus(status.name, id.value)
             queries.insertOutbox(MutationAdvanceStatus, payload, Clock.System.now().toEpochMilliseconds())
+        }
+    }
+
+    suspend fun book(slot: Slot, position: Int, holderName: String, partySize: Int, duration: DurationCode) = withContext(Dispatchers.Default) {
+        val id = "r-${Clock.System.now().toEpochMilliseconds()}-$position"
+        val payload = SyncJson.encodeToString(
+            BookInput(id, slot.id.value, position, partySize, holderName, duration.name, slot.rate.code, slot.rate.priceMinorUnits),
+        )
+        queries.transaction {
+            queries.insertReservation(
+                id,
+                slot.id.value,
+                position.toLong(),
+                partySize.toLong(),
+                holderName,
+                false,
+                duration.name,
+                slot.rate.code,
+                slot.rate.priceMinorUnits,
+                0L,
+                false,
+                false,
+                ReservationStatus.HELD.name,
+                1L,
+            )
+            queries.insertOutbox(MutationBook, payload, Clock.System.now().toEpochMilliseconds())
         }
     }
 
