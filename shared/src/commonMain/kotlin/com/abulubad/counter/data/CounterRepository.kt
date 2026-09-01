@@ -2,17 +2,24 @@ package com.abulubad.counter.data
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOne
 import com.abulubad.counter.data.db.CounterDatabase
+import com.abulubad.counter.data.db.OutboxEntry
 import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.domain.ReservationId
 import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.domain.Resource
 import com.abulubad.counter.domain.Slot
+import com.abulubad.counter.sync.AdvanceStatusInput
+import com.abulubad.counter.sync.MutationAdvanceStatus
+import com.abulubad.counter.sync.SyncJson
+import kotlin.time.Clock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
 
 class CounterRepository(private val database: CounterDatabase) {
     private val queries = database.counterQueries
@@ -31,8 +38,22 @@ class CounterRepository(private val database: CounterDatabase) {
             queries.selectAllSubResources().asFlow().mapToList(Dispatchers.Default),
         ) { resources, subs -> resourcesToDomain(resources, subs) }
 
-    suspend fun setStatus(id: ReservationId, status: ReservationStatus) = withContext(Dispatchers.Default) {
-        queries.updateReservationStatus(status.name, id.value)
+    suspend fun setStatus(id: ReservationId, status: ReservationStatus, expectedVersion: Long) = withContext(Dispatchers.Default) {
+        val payload = SyncJson.encodeToString(AdvanceStatusInput(id.value, status.name, expectedVersion))
+        queries.transaction {
+            queries.updateReservationStatus(status.name, id.value)
+            queries.insertOutbox(MutationAdvanceStatus, payload, Clock.System.now().toEpochMilliseconds())
+        }
+    }
+
+    fun outboxDepth(): Flow<Long> = queries.countOutbox().asFlow().mapToOne(Dispatchers.Default)
+
+    suspend fun pending(): List<OutboxEntry> = withContext(Dispatchers.Default) {
+        queries.selectOutbox().executeAsList()
+    }
+
+    suspend fun markApplied(seq: Long) = withContext(Dispatchers.Default) {
+        queries.deleteOutbox(seq)
     }
 
     suspend fun seedIfEmpty(bundle: SeedBundle = buildSeed()) = withContext(Dispatchers.Default) {

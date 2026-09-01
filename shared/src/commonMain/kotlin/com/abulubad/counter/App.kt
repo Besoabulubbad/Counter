@@ -67,6 +67,8 @@ private fun CounterShell() {
     val viewModel = koinInject<GridViewModel>()
     LaunchedEffect(viewModel) { viewModel.seed() }
     val state by viewModel.state.collectAsState()
+    val offline by viewModel.offline.collectAsState()
+    val outboxDepth by viewModel.outboxDepth.collectAsState()
     var viewMode by remember(compact) { mutableStateOf(if (compact) ViewMode.List else ViewMode.Grid) }
     var selectedKey by remember { mutableStateOf<Pair<String, Int>?>(null) }
     val onSelect: (GridRow, Int) -> Unit = { row, position -> selectedKey = row.slot.id.value to position }
@@ -109,7 +111,7 @@ private fun CounterShell() {
         if (expanded) {
             Row(Modifier.fillMaxSize()) {
                 GridArea(state, viewMode, onSelect, cursor, Modifier.weight(1f).fillMaxHeight())
-                DetailPanel(selectedRow, selectedPos, onAdvance, Modifier.width(340.dp).fillMaxHeight())
+                DetailPanel(selectedRow, selectedPos, onAdvance, offline, outboxDepth, viewModel::toggleOffline, Modifier.width(340.dp).fillMaxHeight())
             }
         } else {
             GridArea(state, viewMode, onSelect, cursor, Modifier.fillMaxSize())

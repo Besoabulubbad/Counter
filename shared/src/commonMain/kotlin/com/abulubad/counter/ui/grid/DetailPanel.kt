@@ -31,7 +31,15 @@ import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
 
 @Composable
-fun DetailPanel(row: GridRow?, position: Int, onAdvance: (Reservation) -> Unit, modifier: Modifier = Modifier) {
+fun DetailPanel(
+    row: GridRow?,
+    position: Int,
+    onAdvance: (Reservation) -> Unit,
+    offline: Boolean,
+    outboxDepth: Long,
+    onToggleOffline: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier.background(CounterColors.SurfaceSunk).verticalScroll(rememberScrollState())) {
         Column(Modifier.fillMaxWidth().padding(15.dp)) {
             if (row == null) {
@@ -40,7 +48,7 @@ fun DetailPanel(row: GridRow?, position: Int, onAdvance: (Reservation) -> Unit, 
                 SelectedDetail(row, position, onAdvance)
             }
         }
-        DebugSection()
+        DebugSection(offline, outboxDepth, onToggleOffline)
     }
 }
 
@@ -103,35 +111,35 @@ private fun ActionChip(label: String, primary: Boolean, modifier: Modifier, onCl
 }
 
 @Composable
-private fun DebugSection() {
+private fun DebugSection(offline: Boolean, outboxDepth: Long, onToggleOffline: () -> Unit) {
     Column(
         Modifier.fillMaxWidth().topRule(CounterColors.Rule).padding(15.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text("Debug · fake backend", color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.micro)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            DebugChip("Offline", Modifier.weight(1f))
-            DebugChip("Force conflict", Modifier.weight(1f))
+            DebugChip("Offline", active = offline, Modifier.weight(1f), onClick = onToggleOffline)
+            DebugChip("Force conflict", active = false, Modifier.weight(1f)) {}
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("outbox 0", color = CounterColors.InkMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
-            Text("latency n/a", color = CounterColors.InkMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
+            Text("outbox $outboxDepth", color = CounterColors.InkMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
+            Text("latency 420ms", color = CounterColors.InkMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
             Text("recomp ${RecompositionStats.live}", color = CounterColors.InkMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
         }
     }
 }
 
 @Composable
-private fun DebugChip(label: String, modifier: Modifier) {
+private fun DebugChip(label: String, active: Boolean, modifier: Modifier, onClick: () -> Unit) {
     Box(
         modifier
-            .clickable {}
-            .background(CounterColors.Surface)
-            .border(1.dp, CounterColors.Rule)
+            .clickable(onClick = onClick)
+            .background(if (active) CounterColors.Chrome else CounterColors.Surface)
+            .border(1.dp, if (active) CounterColors.Chrome else CounterColors.Rule)
             .padding(vertical = 9.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, color = CounterColors.Ink, fontFamily = PlexSans, fontSize = CounterType.body)
+        Text(label, color = if (active) CounterColors.OnChrome else CounterColors.Ink, fontFamily = PlexSans, fontSize = CounterType.body)
     }
 }
 

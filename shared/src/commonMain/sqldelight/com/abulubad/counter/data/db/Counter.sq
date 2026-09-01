@@ -81,3 +81,15 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateReservationStatus:
 UPDATE reservation SET status = ?, version = version + 1 WHERE id = ?;
+
+countOutbox:
+SELECT count(*) FROM outboxEntry;
+
+selectOutbox:
+SELECT * FROM outboxEntry ORDER BY seq;
+
+insertOutbox:
+INSERT INTO outboxEntry(operation, payload, createdAtEpochMs) VALUES (?, ?, ?);
+
+deleteOutbox:
+DELETE FROM outboxEntry WHERE seq = ?;

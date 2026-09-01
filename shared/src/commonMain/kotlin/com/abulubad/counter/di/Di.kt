@@ -2,6 +2,8 @@ package com.abulubad.counter.di
 
 import com.abulubad.counter.data.CounterRepository
 import com.abulubad.counter.data.createCounterDatabase
+import com.abulubad.counter.sync.FakeBackend
+import com.abulubad.counter.sync.SyncEngine
 import com.abulubad.counter.ui.grid.GridViewModel
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
@@ -13,10 +15,12 @@ expect fun platformModule(): Module
 val dataModule = module {
     single { createCounterDatabase(get()) }
     single { CounterRepository(get()) }
+    single { FakeBackend() }
+    single { SyncEngine(get(), get()) }
 }
 
 val uiModule = module {
-    single { GridViewModel(get()) }
+    single { GridViewModel(get(), get()) }
 }
 
 private var started = false

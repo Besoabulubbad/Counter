@@ -3,6 +3,7 @@ package com.abulubad.counter.ui.grid
 import com.abulubad.counter.data.CounterRepository
 import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.domain.next
+import com.abulubad.counter.sync.SyncEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -12,8 +13,22 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class GridViewModel(private val repository: CounterRepository) {
+class GridViewModel(
+    private val repository: CounterRepository,
+    private val syncEngine: SyncEngine,
+) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    init {
+        syncEngine.start()
+    }
+
+    val offline: StateFlow<Boolean> = syncEngine.offline
+
+    val outboxDepth: StateFlow<Long> =
+        repository.outboxDepth().stateIn(scope, SharingStarted.WhileSubscribed(5_000), 0L)
+
+    fun toggleOffline() = syncEngine.setOffline(!syncEngine.offline.value)
 
     val state: StateFlow<GridUiState> =
         combine(
@@ -31,6 +46,6 @@ class GridViewModel(private val repository: CounterRepository) {
 
     fun advance(reservation: Reservation) {
         val next = reservation.status.next() ?: return
-        scope.launch { repository.setStatus(reservation.id, next) }
+        scope.launch { repository.setStatus(reservation.id, next, reservation.version) }
     }
 }
