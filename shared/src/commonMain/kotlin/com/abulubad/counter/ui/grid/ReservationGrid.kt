@@ -48,6 +48,8 @@ import kotlinx.coroutines.delay
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
+private val MinCellWidth = 120.dp
+
 private data class DragState(val reservation: Reservation, val pointer: Offset)
 
 @Composable
@@ -84,8 +86,9 @@ private fun HeaderStrip(positions: Int, scrollX: MutableState<Float>, modifier: 
     val dimens = LocalCounterDimens.current
     val density = LocalDensity.current
     BoxWithConstraints(modifier.background(CounterColors.SurfaceSunk)) {
-        val cellW = with(density) { dimens.cellWidth.toPx() }
         val width = constraints.maxWidth.toFloat()
+        val cellW = maxOf(with(density) { MinCellWidth.toPx() }, width / positions.coerceAtLeast(1))
+        val cellWDp = with(density) { cellW.toDp() }
         val last = (positions - 1).coerceAtLeast(0)
         val firstCol = (scrollX.value / cellW).toInt().coerceIn(0, last)
         val lastCol = ((scrollX.value + width) / cellW).toInt().coerceIn(0, last)
@@ -93,7 +96,7 @@ private fun HeaderStrip(positions: Int, scrollX: MutableState<Float>, modifier: 
             Box(
                 Modifier
                     .offset { IntOffset((col * cellW - scrollX.value).roundToInt(), 0) }
-                    .size(dimens.cellWidth, dimens.headerHeight)
+                    .size(cellWDp, dimens.headerHeight)
                     .border(1.dp, CounterColors.Rule)
                     .padding(horizontal = 9.dp),
                 contentAlignment = Alignment.CenterStart,
@@ -163,9 +166,11 @@ private fun GridBody(
     val density = LocalDensity.current
     BoxWithConstraints(modifier) {
         val rowH = with(density) { dimens.rowHeight.toPx() }
-        val cellW = with(density) { dimens.cellWidth.toPx() }
         val bodyW = constraints.maxWidth.toFloat()
         val bodyH = constraints.maxHeight.toFloat()
+        val minCellPx = with(density) { MinCellWidth.toPx() }
+        val cellW = maxOf(minCellPx, bodyW / state.positions.coerceAtLeast(1))
+        val cellWDp = with(density) { cellW.toDp() }
         val maxX = (state.positions * cellW - bodyW).coerceAtLeast(0f)
         val maxY = (state.rows.size * rowH - bodyH).coerceAtLeast(0f)
 
@@ -308,7 +313,7 @@ private fun GridBody(
                                     (row * rowH - scrollY.value).roundToInt(),
                                 )
                             }
-                            .size(dimens.cellWidth, dimens.rowHeight),
+                            .size(cellWDp, dimens.rowHeight),
                     )
                 }
             }
@@ -322,7 +327,7 @@ private fun GridBody(
                     Box(
                         Modifier
                             .offset { IntOffset((targetCol * cellW - scrollX.value).roundToInt(), (targetRowIndex * rowH - scrollY.value).roundToInt()) }
-                            .size(dimens.cellWidth, dimens.rowHeight)
+                            .size(cellWDp, dimens.rowHeight)
                             .border(2.dp, if (valid) CounterColors.Confirmed else CounterColors.Conflict),
                     )
                 }
