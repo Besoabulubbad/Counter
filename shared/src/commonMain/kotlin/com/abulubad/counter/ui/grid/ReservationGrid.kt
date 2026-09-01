@@ -3,6 +3,8 @@ package com.abulubad.counter.ui.grid
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
@@ -236,35 +238,58 @@ private fun GridBody(
             Modifier.fillMaxSize()
                 .scrollable(vertical, Orientation.Vertical)
                 .scrollable(horizontal, Orientation.Horizontal)
-                .pointerInput(state.rows) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = { offset ->
-                            val col = ((offset.x + scrollX.value) / cellW).toInt()
-                            val rowIndex = ((offset.y + scrollY.value) / rowH).toInt()
-                            val reservation = state.rows.getOrNull(rowIndex)?.cells?.getOrNull(col)
-                            if (reservation != null) drag.value = DragState(reservation, offset)
-                        },
-                        onDrag = { change, _ ->
-                            val current = drag.value
-                            if (current != null) {
-                                drag.value = current.copy(pointer = change.position)
-                                change.consume()
+                .pointerInput(state.rows, dimens.dragNeedsHold) {
+                    val reservationAt: (Offset) -> Reservation? = { offset ->
+                        val col = ((offset.x + scrollX.value) / cellW).toInt()
+                        val rowIndex = ((offset.y + scrollY.value) / rowH).toInt()
+                        state.rows.getOrNull(rowIndex)?.cells?.getOrNull(col)
+                    }
+                    val drop: () -> Unit = {
+                        val current = drag.value
+                        if (current != null) {
+                            val col = ((current.pointer.x + scrollX.value) / cellW).toInt()
+                            val rowIndex = ((current.pointer.y + scrollY.value) / rowH).toInt()
+                            val target = state.rows.getOrNull(rowIndex)
+                            if (target != null && canMoveTo(target, col, Clock.System.now())) {
+                                onMove(current.reservation, target, col)
                             }
-                        },
-                        onDragEnd = {
-                            val current = drag.value
-                            if (current != null) {
-                                val col = ((current.pointer.x + scrollX.value) / cellW).toInt()
-                                val rowIndex = ((current.pointer.y + scrollY.value) / rowH).toInt()
-                                val target = state.rows.getOrNull(rowIndex)
-                                if (target != null && canMoveTo(target, col, Clock.System.now())) {
-                                    onMove(current.reservation, target, col)
+                        }
+                        drag.value = null
+                    }
+                    if (dimens.dragNeedsHold) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { offset -> reservationAt(offset)?.let { drag.value = DragState(it, offset) } },
+                            onDrag = { change, _ ->
+                                if (drag.value != null) {
+                                    drag.value = drag.value?.copy(pointer = change.position)
+                                    change.consume()
+                                }
+                            },
+                            onDragEnd = drop,
+                            onDragCancel = { drag.value = null },
+                        )
+                    } else {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            val reservation = reservationAt(down.position) ?: return@awaitEachGesture
+                            val slop = viewConfiguration.touchSlop
+                            var started = false
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
+                                if (!started && (change.position - down.position).getDistance() > slop) {
+                                    started = true
+                                    drag.value = DragState(reservation, change.position)
+                                }
+                                if (started) {
+                                    drag.value = drag.value?.copy(pointer = change.position)
+                                    change.consume()
                                 }
                             }
-                            drag.value = null
-                        },
-                        onDragCancel = { drag.value = null },
-                    )
+                            if (started) drop() else drag.value = null
+                        }
+                    }
                 },
         ) {
             for (row in firstRow..lastRow) {
