@@ -2,6 +2,7 @@ package com.abulubad.counter.di
 
 import com.abulubad.counter.data.CounterRepository
 import com.abulubad.counter.data.createCounterDatabase
+import com.abulubad.counter.session.Ticket
 import com.abulubad.counter.sync.FakeBackend
 import com.abulubad.counter.sync.SyncEngine
 import com.abulubad.counter.ui.grid.GridViewModel
@@ -17,10 +18,11 @@ val dataModule = module {
     single { CounterRepository(get()) }
     single { FakeBackend() }
     single { SyncEngine(get(), get()) }
+    single { Ticket() }
 }
 
 val uiModule = module {
-    single { GridViewModel(get(), get()) }
+    single { GridViewModel(get(), get(), get()) }
 }
 
 private var started = false

@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.platform.formatCurrency
+import com.abulubad.counter.session.TicketLine
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterType
 import com.abulubad.counter.ui.theme.PlexMono
@@ -35,6 +36,9 @@ fun DetailPanel(
     row: GridRow?,
     position: Int,
     onAdvance: (Reservation) -> Unit,
+    onAddToTicket: (Reservation) -> Unit,
+    ticketLines: List<TicketLine>,
+    ticketTotal: Long,
     offline: Boolean,
     outboxDepth: Long,
     onToggleOffline: () -> Unit,
@@ -47,15 +51,47 @@ fun DetailPanel(
             if (row == null) {
                 Text("Select a slot", color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.body)
             } else {
-                SelectedDetail(row, position, onAdvance)
+                SelectedDetail(row, position, onAdvance, onAddToTicket)
             }
         }
+        TicketSection(ticketLines, ticketTotal)
         DebugSection(offline, outboxDepth, onToggleOffline, forceConflict, onToggleForceConflict)
     }
 }
 
 @Composable
-private fun SelectedDetail(row: GridRow, position: Int, onAdvance: (Reservation) -> Unit) {
+private fun TicketSection(lines: List<TicketLine>, total: Long) {
+    Column(
+        Modifier.fillMaxWidth().topRule(CounterColors.Rule).padding(15.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Ticket · session", color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.micro)
+            Text("${lines.size} lines", color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.micro)
+        }
+        if (lines.isEmpty()) {
+            Text("No lines yet", color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.body)
+        } else {
+            lines.forEach { line ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("${line.qty}", modifier = Modifier.width(16.dp), color = CounterColors.InkMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
+                    Column(Modifier.weight(1f)) {
+                        Text(line.label, color = CounterColors.Ink, fontFamily = PlexSans, fontSize = CounterType.body, maxLines = 1)
+                        Text(line.origin, color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.micro)
+                    }
+                    Text(formatCurrency(line.amountMinorUnits * line.qty, line.currency), color = CounterColors.Ink, fontFamily = PlexMono, fontSize = CounterType.body)
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Total", color = CounterColors.Ink, fontFamily = PlexSans, fontSize = CounterType.emphasis, fontWeight = FontWeight.SemiBold)
+                Text(formatCurrency(total, lines.first().currency), color = CounterColors.Ink, fontFamily = PlexMono, fontSize = CounterType.emphasis, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectedDetail(row: GridRow, position: Int, onAdvance: (Reservation) -> Unit, onAddToTicket: (Reservation) -> Unit) {
     val reservation = row.cells.getOrNull(position)
     val currency = row.slot.rate.currency
     Text("Selected", color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.micro)
@@ -85,7 +121,7 @@ private fun SelectedDetail(row: GridRow, position: Int, onAdvance: (Reservation)
         Spacer(Modifier.height(13.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActionChip(primaryActionLabel(reservation.status), primary = true, Modifier.weight(1f)) { onAdvance(reservation) }
-            ActionChip("Add to ticket", primary = false, Modifier.weight(1f)) {}
+            ActionChip("Add to ticket", primary = false, Modifier.weight(1f)) { onAddToTicket(reservation) }
         }
     }
 }

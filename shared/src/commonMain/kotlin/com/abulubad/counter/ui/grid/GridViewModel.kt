@@ -2,7 +2,10 @@ package com.abulubad.counter.ui.grid
 
 import com.abulubad.counter.data.CounterRepository
 import com.abulubad.counter.domain.Reservation
+import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.domain.next
+import com.abulubad.counter.session.Ticket
+import com.abulubad.counter.session.TicketLine
 import com.abulubad.counter.sync.ConflictInfo
 import com.abulubad.counter.sync.SyncEngine
 import kotlinx.coroutines.CoroutineScope
@@ -11,12 +14,14 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class GridViewModel(
     private val repository: CounterRepository,
     private val syncEngine: SyncEngine,
+    private val ticket: Ticket,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -41,6 +46,15 @@ class GridViewModel(
 
     fun resolveDiscard() = syncEngine.resolveDiscard()
 
+    val ticketLines: StateFlow<List<TicketLine>> = ticket.lines
+
+    val ticketTotal: StateFlow<Long> =
+        ticket.lines.map { lines -> lines.sumOf { it.amountMinorUnits * it.qty } }
+            .stateIn(scope, SharingStarted.WhileSubscribed(5_000), 0L)
+
+    fun addToTicket(reservation: Reservation) =
+        ticket.add("Green fee · ${reservation.holderName}", 1, reservation.priceMinorUnits, "from grid", "USD")
+
     val state: StateFlow<GridUiState> =
         combine(
             repository.slots(),
@@ -56,7 +70,11 @@ class GridViewModel(
     suspend fun seed() = repository.seedIfEmpty()
 
     fun advance(reservation: Reservation) {
-        val next = reservation.status.next() ?: return
-        scope.launch { repository.setStatus(reservation.id, next, reservation.version) }
+        val next = reservation.status.next()
+        if (next != null) {
+            scope.launch { repository.setStatus(reservation.id, next, reservation.version) }
+        } else if (reservation.status == ReservationStatus.CHECKED_IN) {
+            addToTicket(reservation)
+        }
     }
 }

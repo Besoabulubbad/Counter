@@ -36,6 +36,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abulubad.counter.domain.Reservation
+import com.abulubad.counter.platform.formatCurrency
 import com.abulubad.counter.ui.CounterScaffold
 import com.abulubad.counter.ui.LocalPane
 import com.abulubad.counter.ui.NavButton
@@ -82,6 +83,9 @@ private fun CounterShell() {
     val outboxDepth by viewModel.outboxDepth.collectAsState()
     val forceConflict by viewModel.forceConflict.collectAsState()
     val conflict by viewModel.conflict.collectAsState()
+    val ticketLines by viewModel.ticketLines.collectAsState()
+    val ticketTotal by viewModel.ticketTotal.collectAsState()
+    val payLabel = if (ticketTotal > 0L) formatCurrency(ticketTotal, "USD") else null
     var viewMode by remember(compact) { mutableStateOf(if (compact) ViewMode.List else ViewMode.Grid) }
     var selectedKey by remember { mutableStateOf<Pair<String, Int>?>(null) }
     val onSelect: (GridRow, Int) -> Unit = { row, position -> selectedKey = row.slot.id.value to position }
@@ -114,14 +118,14 @@ private fun CounterShell() {
             if (!compact) {
                 toggle()
                 Spacer(Modifier.width(12.dp))
-                PayButton(null)
+                PayButton(payLabel)
             }
         },
         actionBar = if (compact) {
             {
                 toggle()
                 Spacer(Modifier.weight(1f))
-                PayButton(null)
+                PayButton(payLabel)
             }
         } else {
             null
@@ -138,7 +142,7 @@ private fun CounterShell() {
         if (expanded) {
             Row(Modifier.fillMaxSize()) {
                 GridArea(state, viewMode, onSelect, cursor, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.weight(1f).fillMaxHeight())
-                DetailPanel(selectedRow, selectedPos, onAdvance, offline, outboxDepth, viewModel::toggleOffline, forceConflict, viewModel::toggleForceConflict, Modifier.width(340.dp).fillMaxHeight())
+                DetailPanel(selectedRow, selectedPos, onAdvance, viewModel::addToTicket, ticketLines, ticketTotal, offline, outboxDepth, viewModel::toggleOffline, forceConflict, viewModel::toggleForceConflict, Modifier.width(340.dp).fillMaxHeight())
             }
         } else {
             GridArea(state, viewMode, onSelect, cursor, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.fillMaxSize())
