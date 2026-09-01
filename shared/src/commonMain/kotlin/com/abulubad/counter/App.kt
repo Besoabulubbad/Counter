@@ -108,6 +108,10 @@ private fun CounterShell() {
             selectedKey = row.slot.id.value to position
         }
     }
+    val onMove: (Reservation, GridRow, Int) -> Unit = { reservation, row, position ->
+        viewModel.move(reservation.id, row.slot.id, position, reservation.version)
+        selectedKey = row.slot.id.value to position
+    }
     val selectedRow = selectedKey?.let { key -> state.rows.find { it.slot.id.value == key.first } }
     val selectedPos = selectedKey?.second ?: 0
     val cursor = selectedRow?.let { it to selectedPos }
@@ -163,14 +167,14 @@ private fun CounterShell() {
                 if (viewMode == ViewMode.Order) {
                     OrderScreen(onAddItem, Modifier.weight(1f).fillMaxHeight())
                 } else {
-                    GridArea(state, viewMode, onSelect, cursor, cutId, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.weight(1f).fillMaxHeight())
+                    GridArea(state, viewMode, onSelect, cursor, cutId, onMove, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.weight(1f).fillMaxHeight())
                 }
                 DetailPanel(selectedRow, selectedPos, onAdvance, viewModel::addToTicket, viewModel::book, ticketLines, ticketTotal, offline, outboxDepth, viewModel::toggleOffline, forceConflict, viewModel::toggleForceConflict, Modifier.width(340.dp).fillMaxHeight())
             }
         } else if (viewMode == ViewMode.Order) {
             OrderScreen(onAddItem, Modifier.fillMaxSize())
         } else {
-            GridArea(state, viewMode, onSelect, cursor, cutId, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.fillMaxSize())
+            GridArea(state, viewMode, onSelect, cursor, cutId, onMove, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.fillMaxSize())
             if (selectedRow != null) {
                 ModalBottomSheet(
                     onDismissRequest = { selectedKey = null },
@@ -260,6 +264,7 @@ private fun GridArea(
     onSelect: (GridRow, Int) -> Unit,
     selected: Pair<GridRow, Int>?,
     cutId: String?,
+    onMove: (Reservation, GridRow, Int) -> Unit,
     conflict: Triple<GridRow, Int, Long>?,
     onRetry: () -> Unit,
     onDiscard: () -> Unit,
@@ -271,7 +276,7 @@ private fun GridArea(
             ConflictBanner(conflict.first, conflict.second, conflict.third, onRetry, onDiscard)
         }
         when (viewMode) {
-            ViewMode.Grid -> ReservationGrid(state, onSelect, selected, cutId, Modifier.weight(1f).fillMaxWidth())
+            ViewMode.Grid -> ReservationGrid(state, onSelect, selected, cutId, onMove, Modifier.weight(1f).fillMaxWidth())
             ViewMode.List -> ReservationList(state, onSelect, Modifier.weight(1f).fillMaxWidth())
             ViewMode.Order -> Unit
         }

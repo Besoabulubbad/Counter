@@ -3,6 +3,7 @@ package com.abulubad.counter.ui.grid
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,10 +27,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterType
 import com.abulubad.counter.ui.theme.LocalCounterDimens
@@ -38,8 +42,11 @@ import com.abulubad.counter.ui.theme.PlexSans
 import kotlin.math.roundToInt
 import kotlin.time.Clock
 import kotlin.time.Instant
+import kotlinx.coroutines.delay
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+
+private data class DragState(val reservation: Reservation, val pointer: Offset)
 
 @Composable
 fun ReservationGrid(
@@ -47,6 +54,7 @@ fun ReservationGrid(
     onSelect: (GridRow, Int) -> Unit,
     selected: Pair<GridRow, Int>?,
     cutId: String?,
+    onMove: (Reservation, GridRow, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dimens = LocalCounterDimens.current
@@ -64,7 +72,7 @@ fun ReservationGrid(
         }
         Row(Modifier.weight(1f)) {
             TimeColumn(state.rows, scrollY, Modifier.width(dimens.timeColWidth).fillMaxHeight().clipToBounds())
-            GridBody(state, onSelect, selected, cutId, scrollX, scrollY, Modifier.weight(1f).fillMaxHeight().clipToBounds())
+            GridBody(state, onSelect, selected, cutId, onMove, scrollX, scrollY, Modifier.weight(1f).fillMaxHeight().clipToBounds())
         }
     }
 }
@@ -144,6 +152,7 @@ private fun GridBody(
     onSelect: (GridRow, Int) -> Unit,
     selected: Pair<GridRow, Int>?,
     cutId: String?,
+    onMove: (Reservation, GridRow, Int) -> Unit,
     scrollX: MutableState<Float>,
     scrollY: MutableState<Float>,
     modifier: Modifier,
@@ -201,6 +210,19 @@ private fun GridBody(
             old - scrollX.value
         }
 
+        val drag = remember { mutableStateOf<DragState?>(null) }
+        val edgeBand = with(density) { 44.dp.toPx() }
+        LaunchedEffect(drag.value != null) {
+            while (drag.value != null) {
+                val pointer = drag.value?.pointer
+                if (pointer != null) {
+                    if (pointer.y < edgeBand) scrollY.value = (scrollY.value - 14f).coerceIn(0f, maxY)
+                    else if (pointer.y > bodyH - edgeBand) scrollY.value = (scrollY.value + 14f).coerceIn(0f, maxY)
+                }
+                delay(16)
+            }
+        }
+
         if (state.rows.isEmpty()) return@BoxWithConstraints
         val sx = scrollX.value.coerceIn(0f, maxX)
         val sy = scrollY.value.coerceIn(0f, maxY)
@@ -213,7 +235,37 @@ private fun GridBody(
         Box(
             Modifier.fillMaxSize()
                 .scrollable(vertical, Orientation.Vertical)
-                .scrollable(horizontal, Orientation.Horizontal),
+                .scrollable(horizontal, Orientation.Horizontal)
+                .pointerInput(state.rows) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { offset ->
+                            val col = ((offset.x + scrollX.value) / cellW).toInt()
+                            val rowIndex = ((offset.y + scrollY.value) / rowH).toInt()
+                            val reservation = state.rows.getOrNull(rowIndex)?.cells?.getOrNull(col)
+                            if (reservation != null) drag.value = DragState(reservation, offset)
+                        },
+                        onDrag = { change, _ ->
+                            val current = drag.value
+                            if (current != null) {
+                                drag.value = current.copy(pointer = change.position)
+                                change.consume()
+                            }
+                        },
+                        onDragEnd = {
+                            val current = drag.value
+                            if (current != null) {
+                                val col = ((current.pointer.x + scrollX.value) / cellW).toInt()
+                                val rowIndex = ((current.pointer.y + scrollY.value) / rowH).toInt()
+                                val target = state.rows.getOrNull(rowIndex)
+                                if (target != null && canMoveTo(target, col, Clock.System.now())) {
+                                    onMove(current.reservation, target, col)
+                                }
+                            }
+                            drag.value = null
+                        },
+                        onDragCancel = { drag.value = null },
+                    )
+                },
         ) {
             for (row in firstRow..lastRow) {
                 val gridRow = state.rows[row]
@@ -232,6 +284,38 @@ private fun GridBody(
                                 )
                             }
                             .size(dimens.cellWidth, dimens.rowHeight),
+                    )
+                }
+            }
+            val active = drag.value
+            if (active != null) {
+                val targetCol = ((active.pointer.x + scrollX.value) / cellW).toInt()
+                val targetRowIndex = ((active.pointer.y + scrollY.value) / rowH).toInt()
+                val targetRow = state.rows.getOrNull(targetRowIndex)
+                val valid = targetRow != null && canMoveTo(targetRow, targetCol, Clock.System.now())
+                if (targetRow != null && targetCol in 0..lastPos) {
+                    Box(
+                        Modifier
+                            .offset { IntOffset((targetCol * cellW - scrollX.value).roundToInt(), (targetRowIndex * rowH - scrollY.value).roundToInt()) }
+                            .size(dimens.cellWidth, dimens.rowHeight)
+                            .border(2.dp, if (valid) CounterColors.Confirmed else CounterColors.Conflict),
+                    )
+                }
+                Box(
+                    Modifier
+                        .offset { IntOffset((active.pointer.x - cellW / 2f).roundToInt(), (active.pointer.y - rowH / 2f).roundToInt()) }
+                        .size(dimens.cellWidth, dimens.rowHeight)
+                        .background(chipColor(active.reservation.status))
+                        .border(1.dp, CounterColors.Ink)
+                        .padding(horizontal = 9.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        active.reservation.holderName,
+                        color = CounterColors.OnFill,
+                        fontFamily = PlexSans,
+                        fontSize = CounterType.body,
+                        fontWeight = FontWeight.Medium,
                     )
                 }
             }
