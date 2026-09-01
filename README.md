@@ -115,6 +115,12 @@ and Hilt cannot compile there at all.
 | iOS | open `iosApp/` in Xcode and run — this builds the shared framework |
 | Tests | `./gradlew :shared:jvmTest` — the `commonTest` suite also runs on Android and iOS targets |
 
+## Releases
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds and attaches a **Windows
+MSI** and a **signed Android APK** to the GitHub release. The desktop package takes its version
+from the tag; the APK is signed with the debug key so it installs without keystore setup.
+
 ## The `ReceiptPrinter` boundary — real, not a stub
 
 `ReceiptPrinter` is a genuine implementation on every target, not a `Result.success(Unit)`

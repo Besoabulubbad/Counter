@@ -21,8 +21,8 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.abulubad.counter"
-            packageVersion = "1.0.0"
+            packageName = "Counter"
+            packageVersion = System.getenv("APP_VERSION") ?: "1.0.0"
         }
     }
 }
