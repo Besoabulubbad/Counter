@@ -130,23 +130,26 @@ a real thermal printer is a one-file change per target.
 
 ## Measured
 
-Observed, not aspirational — method noted so you can reproduce them.
+Observed on a physical **Samsung Galaxy A34 (Android 16)** — a mid-range device, chosen so the
+numbers aren't flattering. Method noted so you can reproduce them.
 
-- **Scroll performance.** Flinging the 400-row grid on a Pixel Tablet emulator (1280×800dp),
-  over 300 rendered frames: median frame **17 ms**, 90th percentile **25 ms**, 95th **30 ms**,
-  **~8% janky**. The median sits on the 60 fps budget (16.7 ms); a physical device is typically
-  smoother than an emulator, not worse. Captured with `dumpsys gfxinfo` after a scripted fling.
-- **Only visible cells compose.** The grid is a custom windowed layout — not a `LazyColumn` of
-  `LazyRow`s — so it composes only the on-screen window: roughly **70 cells of the 2,400** in the
-  sheet on a tablet viewport. The debug panel's live recomposition counter shows this in real
-  time and falls back as rows scroll off.
-- **Cold start.** `am start -W` on the same emulator: **~200 ms** to first frame on a warm launch
-  (191 / 214 / 324 ms across three runs), **~470 ms** on the very first launch, which also seeds
-  400 slots.
+- **Scroll performance.** Continuous flinging of the 400-row grid, ~700 rendered frames
+  (`dumpsys gfxinfo`): **0.14% janky frames, zero missed vsync**, 90th-percentile frame **31 ms**.
+  It scrolls smoothly on mid-range hardware. Profiling is what got it there: the first pass showed
+  **5.3% jank and 17 missed vsyncs**, because the grid recomputed its visible window *in
+  composition* and so recomposed on every scroll frame. Moving that window math into
+  `derivedStateOf` — so it recomposes only when a new row actually scrolls in — took it to the
+  numbers above (65 ms → 31 ms at the 90th percentile).
+- **Only visible cells compose.** The custom windowed layout — not a `LazyColumn` of `LazyRow`s —
+  composes only the on-screen window: about **70 cells of the 2,400** in the sheet. The debug
+  panel's live recomposition counter shows this in real time and falls back as rows scroll off.
+- **Cold start.** `am start -W`: **~600 ms** warm on the A34 (three runs: 594 / 608 / 790 ms),
+  ~730 ms on the very first launch, which also seeds 400 slots. (~200 ms warm on a Pixel Tablet
+  emulator, for reference.)
 - **Size.** Android APK **10 MB**. Desktop bundle **85 MB** — jpackage embeds a JRE, so the
   Windows MSI lands in that range (built by CI on `windows-latest`).
 
-One thing stays a stub on purpose: the backend is a deliberate **in-memory fake**. It round-trips
+One thing stays a stub on purpose: the backend is a deliberate **in-memory fake** — it round-trips
 mutations through the outbox and sync path exactly as a real one would, and never writes the local
 database directly.
 
