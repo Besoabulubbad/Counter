@@ -7,14 +7,14 @@ CREATE TABLE resource (
 
 CREATE TABLE subResource (
   id TEXT NOT NULL PRIMARY KEY,
-  resourceId TEXT NOT NULL,
+  resourceId TEXT NOT NULL REFERENCES resource(id),
   name TEXT NOT NULL
 );
 
 CREATE TABLE slot (
   id TEXT NOT NULL PRIMARY KEY,
-  resourceId TEXT NOT NULL,
-  subResourceId TEXT,
+  resourceId TEXT NOT NULL REFERENCES resource(id),
+  subResourceId TEXT REFERENCES subResource(id),
   startsAtEpochMs INTEGER NOT NULL,
   capacity INTEGER NOT NULL,
   rateCode TEXT NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE slot (
 
 CREATE TABLE reservation (
   id TEXT NOT NULL PRIMARY KEY,
-  slotId TEXT NOT NULL,
+  slotId TEXT NOT NULL REFERENCES slot(id),
   position INTEGER NOT NULL,
   partySize INTEGER NOT NULL,
   holderName TEXT NOT NULL,
@@ -39,6 +39,9 @@ CREATE TABLE reservation (
   status TEXT NOT NULL,
   version INTEGER NOT NULL
 );
+
+CREATE INDEX slot_startsAt ON slot(startsAtEpochMs);
+CREATE INDEX reservation_slot ON reservation(slotId);
 
 CREATE TABLE outboxEntry (
   seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,14 +88,23 @@ UPDATE reservation SET status = ?, version = version + 1 WHERE id = ?;
 updateReservationSlotPosition:
 UPDATE reservation SET slotId = ?, position = ?, version = version + 1 WHERE id = ?;
 
+updateReservationVersion:
+UPDATE reservation SET version = ? WHERE id = ?;
+
 countOutbox:
 SELECT count(*) FROM outboxEntry;
 
 selectOutbox:
 SELECT * FROM outboxEntry ORDER BY seq;
 
+selectOutboxBySeq:
+SELECT * FROM outboxEntry WHERE seq = ?;
+
 insertOutbox:
 INSERT INTO outboxEntry(operation, payload, createdAtEpochMs) VALUES (?, ?, ?);
+
+updateOutboxPayload:
+UPDATE outboxEntry SET payload = ? WHERE seq = ?;
 
 deleteOutbox:
 DELETE FROM outboxEntry WHERE seq = ?;

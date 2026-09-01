@@ -42,6 +42,13 @@ sheet to a desktop rail.
 - **No architecture framework.** One plain `StateFlow` state-holder per screen. DI is Koin,
   and only Koin.
 
+**Data-layer scale, stated plainly.** The grid loads a full day through `selectAllSlots` /
+`selectAllReservations` and rebuilds the model on any change. `slot(startsAtEpochMs)` and
+`reservation(slotId)` are indexed and foreign keys are enforced, which keeps a day's ~400 rows
+comfortable — but the *data* is not yet windowed the way the rendering is. A season of ~50,000
+reservations would want a date-range query feeding the grid instead of a full-table load; that
+query is the next step, and the windowed layout above it already expects a bounded slice.
+
 ## Dependency injection: migrating from Hilt/Dagger to Koin
 
 A native Android app usually wires its object graph with **Hilt** (Dagger underneath). That
