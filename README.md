@@ -137,3 +137,9 @@ a real thermal printer is a one-file change per target.
 Kotlin 2.4.10 · Compose Multiplatform 1.11.1 · AGP 9.0.1 · SQLDelight 2.3.2 · Koin 4.2.2 ·
 kotlinx-coroutines 1.11.0 · kotlinx-datetime 0.8.0 · kotlinx-serialization 1.11.0. Android
 `compileSdk` 36, `minSdk` 24. Exact coordinates live in `gradle/libs.versions.toml`.
+
+## Fonts
+
+Type is **IBM Plex Sans** and **IBM Plex Mono**, bundled as static weights (Regular / Medium /
+SemiBold) via Compose resources and loaded once through the theme into a CompositionLocal. IBM
+Plex is licensed under the SIL Open Font License 1.1 — see `licenses/IBM-Plex-OFL.txt`.

@@ -12,6 +12,7 @@ fun CounterTheme(
 ) {
     CompositionLocalProvider(
         LocalCounterDimens provides dimensFor(inputMode),
+        LocalCounterFonts provides counterFonts(),
     ) {
         content()
     }
