@@ -31,6 +31,7 @@ import com.abulubad.counter.ui.LocalPane
 import com.abulubad.counter.ui.NavButton
 import com.abulubad.counter.ui.Pane
 import com.abulubad.counter.ui.PayButton
+import com.abulubad.counter.ui.grid.ConflictBanner
 import com.abulubad.counter.ui.grid.CountersStrip
 import com.abulubad.counter.ui.grid.DetailPanel
 import com.abulubad.counter.ui.grid.GridRow
@@ -69,6 +70,8 @@ private fun CounterShell() {
     val state by viewModel.state.collectAsState()
     val offline by viewModel.offline.collectAsState()
     val outboxDepth by viewModel.outboxDepth.collectAsState()
+    val forceConflict by viewModel.forceConflict.collectAsState()
+    val conflict by viewModel.conflict.collectAsState()
     var viewMode by remember(compact) { mutableStateOf(if (compact) ViewMode.List else ViewMode.Grid) }
     var selectedKey by remember { mutableStateOf<Pair<String, Int>?>(null) }
     val onSelect: (GridRow, Int) -> Unit = { row, position -> selectedKey = row.slot.id.value to position }
@@ -76,6 +79,12 @@ private fun CounterShell() {
     val selectedRow = selectedKey?.let { key -> state.rows.find { it.slot.id.value == key.first } }
     val selectedPos = selectedKey?.second ?: 0
     val cursor = selectedRow?.let { it to selectedPos }
+    val conflictLocation = conflict?.let { c ->
+        state.rows.firstNotNullOfOrNull { row ->
+            val index = row.cells.indexOfFirst { it?.id?.value == c.reservationId }
+            if (index >= 0) Triple(row, index, c.serverVersion) else null
+        }
+    }
 
     val toggle: @Composable RowScope.() -> Unit = {
         NavButton("Grid", active = viewMode == ViewMode.Grid) { viewMode = ViewMode.Grid }
@@ -110,11 +119,11 @@ private fun CounterShell() {
     ) {
         if (expanded) {
             Row(Modifier.fillMaxSize()) {
-                GridArea(state, viewMode, onSelect, cursor, Modifier.weight(1f).fillMaxHeight())
-                DetailPanel(selectedRow, selectedPos, onAdvance, offline, outboxDepth, viewModel::toggleOffline, Modifier.width(340.dp).fillMaxHeight())
+                GridArea(state, viewMode, onSelect, cursor, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.weight(1f).fillMaxHeight())
+                DetailPanel(selectedRow, selectedPos, onAdvance, offline, outboxDepth, viewModel::toggleOffline, forceConflict, viewModel::toggleForceConflict, Modifier.width(340.dp).fillMaxHeight())
             }
         } else {
-            GridArea(state, viewMode, onSelect, cursor, Modifier.fillMaxSize())
+            GridArea(state, viewMode, onSelect, cursor, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.fillMaxSize())
             if (selectedRow != null) {
                 ModalBottomSheet(
                     onDismissRequest = { selectedKey = null },
@@ -136,10 +145,16 @@ private fun GridArea(
     viewMode: ViewMode,
     onSelect: (GridRow, Int) -> Unit,
     selected: Pair<GridRow, Int>?,
+    conflict: Triple<GridRow, Int, Long>?,
+    onRetry: () -> Unit,
+    onDiscard: () -> Unit,
     modifier: Modifier,
 ) {
     Column(modifier) {
         CountersStrip(state.counters, Modifier.fillMaxWidth())
+        if (conflict != null) {
+            ConflictBanner(conflict.first, conflict.second, conflict.third, onRetry, onDiscard)
+        }
         when (viewMode) {
             ViewMode.Grid -> ReservationGrid(state, onSelect, selected, Modifier.weight(1f).fillMaxWidth())
             ViewMode.List -> ReservationList(state, onSelect, Modifier.weight(1f).fillMaxWidth())

@@ -38,6 +38,8 @@ fun DetailPanel(
     offline: Boolean,
     outboxDepth: Long,
     onToggleOffline: () -> Unit,
+    forceConflict: Boolean,
+    onToggleForceConflict: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.background(CounterColors.SurfaceSunk).verticalScroll(rememberScrollState())) {
@@ -48,7 +50,7 @@ fun DetailPanel(
                 SelectedDetail(row, position, onAdvance)
             }
         }
-        DebugSection(offline, outboxDepth, onToggleOffline)
+        DebugSection(offline, outboxDepth, onToggleOffline, forceConflict, onToggleForceConflict)
     }
 }
 
@@ -111,7 +113,7 @@ private fun ActionChip(label: String, primary: Boolean, modifier: Modifier, onCl
 }
 
 @Composable
-private fun DebugSection(offline: Boolean, outboxDepth: Long, onToggleOffline: () -> Unit) {
+private fun DebugSection(offline: Boolean, outboxDepth: Long, onToggleOffline: () -> Unit, forceConflict: Boolean, onToggleForceConflict: () -> Unit) {
     Column(
         Modifier.fillMaxWidth().topRule(CounterColors.Rule).padding(15.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -119,7 +121,7 @@ private fun DebugSection(offline: Boolean, outboxDepth: Long, onToggleOffline: (
         Text("Debug · fake backend", color = CounterColors.InkMuted, fontFamily = PlexSans, fontSize = CounterType.micro)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DebugChip("Offline", active = offline, Modifier.weight(1f), onClick = onToggleOffline)
-            DebugChip("Force conflict", active = false, Modifier.weight(1f)) {}
+            DebugChip("Force conflict", active = forceConflict, Modifier.weight(1f), onClick = onToggleForceConflict)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("outbox $outboxDepth", color = CounterColors.InkMuted, fontFamily = PlexMono, fontSize = CounterType.micro)

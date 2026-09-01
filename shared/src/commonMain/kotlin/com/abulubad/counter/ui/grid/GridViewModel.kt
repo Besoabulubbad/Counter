@@ -3,6 +3,7 @@ package com.abulubad.counter.ui.grid
 import com.abulubad.counter.data.CounterRepository
 import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.domain.next
+import com.abulubad.counter.sync.ConflictInfo
 import com.abulubad.counter.sync.SyncEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +30,16 @@ class GridViewModel(
         repository.outboxDepth().stateIn(scope, SharingStarted.WhileSubscribed(5_000), 0L)
 
     fun toggleOffline() = syncEngine.setOffline(!syncEngine.offline.value)
+
+    val forceConflict: StateFlow<Boolean> = syncEngine.forceConflict
+
+    val conflict: StateFlow<ConflictInfo?> = syncEngine.conflict
+
+    fun toggleForceConflict() = syncEngine.setForceConflict(!syncEngine.forceConflict.value)
+
+    fun resolveRetry() = syncEngine.resolveRetry()
+
+    fun resolveDiscard() = syncEngine.resolveDiscard()
 
     val state: StateFlow<GridUiState> =
         combine(

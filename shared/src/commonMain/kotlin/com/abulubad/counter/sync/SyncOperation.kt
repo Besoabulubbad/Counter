@@ -13,3 +13,9 @@ data class AdvanceStatusInput(
 )
 
 val SyncJson = Json { encodeDefaults = true }
+
+data class ConflictInfo(
+    val seq: Long,
+    val reservationId: String,
+    val serverVersion: Long,
+)
