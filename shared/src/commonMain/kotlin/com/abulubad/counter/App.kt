@@ -43,6 +43,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abulubad.counter.domain.Reservation
+import com.abulubad.counter.domain.Slot
 import com.abulubad.counter.platform.formatCurrency
 import com.abulubad.counter.ui.CounterScaffold
 import com.abulubad.counter.ui.LocalPane
@@ -185,7 +186,7 @@ private fun CounterShell() {
             Modifier.fillMaxSize()
                 .focusRequester(focusRequester)
                 .focusTarget()
-                .onPreviewKeyEvent { event -> handleGridKey(event, state, viewMode, selectedKey, onAdvance, onCut, onPaste, onCancelCut) { selectedKey = it } },
+                .onPreviewKeyEvent { event -> handleGridKey(event, state, viewMode, selectedKey, onAdvance, viewModel::book, onCut, onPaste, onCancelCut) { selectedKey = it } },
         ) {
         if (expanded) {
             Row(Modifier.fillMaxSize()) {
@@ -245,6 +246,7 @@ private fun handleGridKey(
     viewMode: ViewMode,
     selectedKey: Pair<String, Int>?,
     onAdvance: (Reservation) -> Unit,
+    onBook: (Slot, Int) -> Unit,
     onCut: (Reservation) -> Unit,
     onPaste: (GridRow, Int) -> Unit,
     onCancelCut: () -> Unit,
@@ -267,12 +269,18 @@ private fun handleGridKey(
         Key.DirectionLeft -> move(curRow, curCol - 1)
         Key.DirectionRight -> move(curRow, curCol + 1)
         Key.Enter -> {
-            val reservation = if (selectedKey != null) rows.getOrNull(curRow)?.cells?.getOrNull(curCol) else null
-            if (reservation != null) {
-                onAdvance(reservation)
-                true
-            } else {
-                false
+            val row = if (selectedKey != null) rows.getOrNull(curRow) else null
+            val reservation = row?.cells?.getOrNull(curCol)
+            when {
+                reservation != null -> {
+                    onAdvance(reservation)
+                    true
+                }
+                row != null && canMoveTo(row, curCol, Clock.System.now()) -> {
+                    onBook(row.slot, curCol)
+                    true
+                }
+                else -> false
             }
         }
         Key.X -> {

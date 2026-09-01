@@ -78,10 +78,11 @@ class GridViewModel(
 
     fun advance(reservation: Reservation) {
         val next = reservation.status.next()
-        if (next != null) {
-            scope.launch { repository.setStatus(reservation.id, next, reservation.version) }
-        } else if (reservation.status == ReservationStatus.CHECKED_IN) {
-            addToTicket(reservation)
+        when {
+            next != null -> scope.launch { repository.setStatus(reservation.id, next, reservation.version) }
+            reservation.status == ReservationStatus.CHECKED_IN -> addToTicket(reservation)
+            reservation.status == ReservationStatus.NO_SHOW || reservation.status == ReservationStatus.CANCELLED ->
+                scope.launch { repository.setStatus(reservation.id, ReservationStatus.HELD, reservation.version) }
         }
     }
 
