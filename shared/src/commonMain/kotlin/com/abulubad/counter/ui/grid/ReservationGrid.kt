@@ -160,6 +160,24 @@ private fun GridBody(
             scrollY.value = scrollY.value.coerceIn(0f, maxY)
         }
 
+        LaunchedEffect(selected) {
+            val sel = selected ?: return@LaunchedEffect
+            val rowIndex = state.rows.indexOf(sel.first)
+            if (rowIndex < 0) return@LaunchedEffect
+            val cellTop = rowIndex * rowH
+            val cellLeft = sel.second * cellW
+            if (cellTop < scrollY.value) {
+                scrollY.value = cellTop
+            } else if (cellTop + rowH > scrollY.value + bodyH) {
+                scrollY.value = (cellTop + rowH - bodyH).coerceAtLeast(0f)
+            }
+            if (cellLeft < scrollX.value) {
+                scrollX.value = cellLeft
+            } else if (cellLeft + cellW > scrollX.value + bodyW) {
+                scrollX.value = (cellLeft + cellW - bodyW).coerceAtLeast(0f)
+            }
+        }
+
         val vertical = rememberScrollableState { delta ->
             val old = scrollY.value
             scrollY.value = (old - delta).coerceIn(0f, maxY)

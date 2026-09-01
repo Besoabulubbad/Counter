@@ -1,5 +1,7 @@
 package com.abulubad.counter
 
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,8 +23,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abulubad.counter.domain.Reservation
@@ -117,6 +127,14 @@ private fun CounterShell() {
             null
         },
     ) {
+        val focusRequester = remember { FocusRequester() }
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
+        Box(
+            Modifier.fillMaxSize()
+                .focusRequester(focusRequester)
+                .focusable()
+                .onPreviewKeyEvent { event -> handleGridKey(event, state, viewMode, selectedKey, onAdvance) { selectedKey = it } },
+        ) {
         if (expanded) {
             Row(Modifier.fillMaxSize()) {
                 GridArea(state, viewMode, onSelect, cursor, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.weight(1f).fillMaxHeight())
@@ -136,6 +154,48 @@ private fun CounterShell() {
                 }
             }
         }
+        }
+    }
+}
+
+private fun handleGridKey(
+    event: KeyEvent,
+    state: GridUiState,
+    viewMode: ViewMode,
+    selectedKey: Pair<String, Int>?,
+    onAdvance: (Reservation) -> Unit,
+    setSelectedKey: (Pair<String, Int>?) -> Unit,
+): Boolean {
+    if (event.type != KeyEventType.KeyDown || viewMode != ViewMode.Grid || state.rows.isEmpty()) return false
+    val rows = state.rows
+    val lastCol = (state.positions - 1).coerceAtLeast(0)
+    val curRow = selectedKey?.first
+        ?.let { id -> rows.indexOfFirst { it.slot.id.value == id } }
+        ?.takeIf { it >= 0 } ?: 0
+    val curCol = selectedKey?.second ?: 0
+    fun move(row: Int, col: Int): Boolean {
+        setSelectedKey(rows[row.coerceIn(0, rows.lastIndex)].slot.id.value to col.coerceIn(0, lastCol))
+        return true
+    }
+    return when (event.key) {
+        Key.DirectionUp -> move(curRow - 1, curCol)
+        Key.DirectionDown -> move(curRow + 1, curCol)
+        Key.DirectionLeft -> move(curRow, curCol - 1)
+        Key.DirectionRight -> move(curRow, curCol + 1)
+        Key.Enter -> {
+            val reservation = if (selectedKey != null) rows.getOrNull(curRow)?.cells?.getOrNull(curCol) else null
+            if (reservation != null) {
+                onAdvance(reservation)
+                true
+            } else {
+                false
+            }
+        }
+        Key.Escape -> {
+            setSelectedKey(null)
+            true
+        }
+        else -> false
     }
 }
 
