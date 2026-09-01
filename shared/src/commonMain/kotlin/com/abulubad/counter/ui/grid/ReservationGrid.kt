@@ -93,8 +93,12 @@ private fun HeaderStrip(positions: Int, scrollX: MutableState<Float>, modifier: 
         val cellW = maxOf(with(density) { MinCellWidth.toPx() }, width / positions.coerceAtLeast(1))
         val cellWDp = with(density) { cellW.toDp() }
         val last = (positions - 1).coerceAtLeast(0)
-        val firstCol = (scrollX.value / cellW).toInt().coerceIn(0, last)
-        val lastCol = ((scrollX.value + width) / cellW).toInt().coerceIn(0, last)
+        val firstCol by remember(cellW, width, last) {
+            derivedStateOf { (scrollX.value / cellW).toInt().coerceIn(0, last) }
+        }
+        val lastCol by remember(cellW, width, last) {
+            derivedStateOf { ((scrollX.value + width) / cellW).toInt().coerceIn(0, last) }
+        }
         for (col in firstCol..lastCol) {
             Box(
                 Modifier
@@ -123,8 +127,12 @@ private fun TimeColumn(rows: List<GridRow>, scrollY: MutableState<Float>, modifi
         if (rows.isEmpty()) return@BoxWithConstraints
         val rowH = with(density) { dimens.rowHeight.toPx() }
         val height = constraints.maxHeight.toFloat()
-        val firstRow = (scrollY.value / rowH).toInt().coerceIn(0, rows.lastIndex)
-        val lastRow = ((scrollY.value + height) / rowH).toInt().coerceIn(0, rows.lastIndex)
+        val firstRow by remember(rowH, height, rows) {
+            derivedStateOf { (scrollY.value / rowH).toInt().coerceIn(0, rows.lastIndex) }
+        }
+        val lastRow by remember(rowH, height, rows) {
+            derivedStateOf { ((scrollY.value + height) / rowH).toInt().coerceIn(0, rows.lastIndex) }
+        }
         for (row in firstRow..lastRow) {
             Column(
                 Modifier

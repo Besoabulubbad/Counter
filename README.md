@@ -133,13 +133,18 @@ a real thermal printer is a one-file change per target.
 Observed on a physical **Samsung Galaxy A34 (Android 16)** — a mid-range device, chosen so the
 numbers aren't flattering. Method noted so you can reproduce them.
 
-- **Scroll performance.** Continuous flinging of the 400-row grid, ~700 rendered frames
-  (`dumpsys gfxinfo`): **0.14% janky frames, zero missed vsync**, 90th-percentile frame **31 ms**.
-  It scrolls smoothly on mid-range hardware. Profiling is what got it there: the first pass showed
-  **5.3% jank and 17 missed vsyncs**, because the grid recomputed its visible window *in
-  composition* and so recomposed on every scroll frame. Moving that window math into
-  `derivedStateOf` — so it recomposes only when a new row actually scrolls in — took it to the
-  numbers above (65 ms → 31 ms at the 90th percentile).
+- **Scroll performance.** Continuous flinging of the 400-row grid on the **release** build (the
+  60 Hz panel; debug Compose is far jankier and not the target), three passes of ~1,600 rendered
+  frames each (`dumpsys gfxinfo`): **0% janky frames** — one stray frame across the three passes
+  (0.06%) — **zero missed vsync**, GPU frame time ~**3 ms**. It scrolls smoothly on mid-range
+  hardware. Profiling is what got it there: an early pass showed **5.3% jank and 17 missed
+  vsyncs**, because the grid recomputed its visible window *in composition* and recomposed on
+  every scroll frame. Moving that window math into `derivedStateOf` — for the grid body **and both
+  sticky axes** (the header strip and time column were the last two still reading the scroll
+  offset in composition), so it recomposes only when a new row or column scrolls in — took it
+  there. (Wall-clock frame-time percentiles read high under adb-injected flinging because
+  synthetic input adds latency the render pipeline doesn't; the jank/vsync counts and the ~3 ms
+  GPU time are the honest signals.)
 - **Only visible cells compose.** The custom windowed layout — not a `LazyColumn` of `LazyRow`s —
   composes only the on-screen window: about **70 cells of the 2,400** in the sheet. The debug
   panel's live recomposition counter shows this in real time and falls back as rows scroll off.
