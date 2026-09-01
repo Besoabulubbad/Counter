@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.abulubad.counter.domain.DurationCode
 import com.abulubad.counter.domain.Reservation
@@ -34,6 +35,7 @@ import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.platform.formatCurrency
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterType
+import com.abulubad.counter.ui.theme.LocalCounterDimens
 import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
 
@@ -46,6 +48,7 @@ internal fun GridCell(
     onClick: () -> Unit,
     modifier: Modifier,
 ) {
+    val dimens = LocalCounterDimens.current
     DisposableEffect(Unit) {
         RecompositionStats.enter()
         onDispose { RecompositionStats.leave() }
@@ -55,9 +58,9 @@ internal fun GridCell(
             .background(fillFor(reservation))
             .clickable(onClick = onClick)
             .drawWithContent {
-                if (reservation != null) drawCellCues(reservation)
+                if (reservation != null) drawCellCues(reservation, dimens.cueWidth)
                 drawContent()
-                drawSeams()
+                drawSeams(dimens.seamWidth)
                 if (cut) drawCutMarker()
                 if (selected) drawCursor()
             },
@@ -73,8 +76,9 @@ internal fun GridCell(
 
 @Composable
 private fun CellContent(reservation: Reservation, currency: String) {
+    val dimens = LocalCounterDimens.current
     Column(
-        Modifier.fillMaxSize().padding(horizontal = 9.dp),
+        Modifier.fillMaxSize().padding(horizontal = dimens.cellPadding),
         verticalArrangement = Arrangement.Center,
     ) {
         Row(
@@ -83,7 +87,7 @@ private fun CellContent(reservation: Reservation, currency: String) {
         ) {
             Text(
                 "${reservation.partySize}",
-                color = CounterColors.OnFillMuted,
+                color = CounterColors.OnFill,
                 fontFamily = PlexMono,
                 fontSize = CounterType.micro,
             )
@@ -98,7 +102,7 @@ private fun CellContent(reservation: Reservation, currency: String) {
                 overflow = TextOverflow.Ellipsis,
             )
             if (reservation.bookedOnline) {
-                Box(Modifier.size(5.dp).background(CounterColors.OnFill.copy(alpha = 0.85f), CircleShape))
+                Box(Modifier.size(5.dp).background(CounterColors.OnFill, CircleShape))
             }
         }
         Spacer(Modifier.size(2.dp))
@@ -106,10 +110,10 @@ private fun CellContent(reservation: Reservation, currency: String) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(7.dp),
         ) {
-            Text(durationLabel(reservation.duration), color = CounterColors.OnFillMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
-            Text(reservation.rateCode, color = CounterColors.OnFillMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
+            Text(durationLabel(reservation.duration), color = CounterColors.OnFill, fontFamily = PlexMono, fontSize = CounterType.micro)
+            Text(reservation.rateCode, color = CounterColors.OnFill, fontFamily = PlexMono, fontSize = CounterType.micro)
             if (reservation.hasCart) {
-                Text("cart", color = CounterColors.OnFillMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
+                Text("cart", color = CounterColors.OnFill, fontFamily = PlexMono, fontSize = CounterType.micro)
             }
             Spacer(Modifier.weight(1f))
             Text(
@@ -126,7 +130,7 @@ private fun CellContent(reservation: Reservation, currency: String) {
 private fun CancelledContent(reservation: Reservation) {
     Text(
         reservation.holderName,
-        modifier = Modifier.padding(horizontal = 9.dp),
+        modifier = Modifier.padding(horizontal = LocalCounterDimens.current.cellPadding),
         color = CounterColors.InkMuted,
         fontFamily = PlexSans,
         fontSize = CounterType.body,
@@ -191,13 +195,13 @@ private fun DrawScope.drawCutMarker() {
     )
 }
 
-private fun DrawScope.drawSeams() {
-    val w = 1.dp.toPx()
+private fun DrawScope.drawSeams(seamWidth: Dp) {
+    val w = seamWidth.toPx()
     drawLine(CounterColors.Rule, Offset(size.width - w / 2, 0f), Offset(size.width - w / 2, size.height), strokeWidth = w)
     drawLine(CounterColors.Rule, Offset(0f, size.height - w / 2), Offset(size.width, size.height - w / 2), strokeWidth = w)
 }
 
-private fun DrawScope.drawCellCues(reservation: Reservation) {
+private fun DrawScope.drawCellCues(reservation: Reservation, cueWidth: Dp) {
     when (reservation.status) {
         ReservationStatus.HELD -> {
             val x = 2.dp.toPx()
@@ -210,7 +214,7 @@ private fun DrawScope.drawCellCues(reservation: Reservation) {
             )
         }
         ReservationStatus.CHECKED_IN -> {
-            drawRect(color = CounterColors.CheckedInEdge, size = Size(6.dp.toPx(), size.height))
+            drawRect(color = CounterColors.CheckedInEdge, size = Size(cueWidth.toPx(), size.height))
         }
         ReservationStatus.NO_SHOW -> {
             clipRect {
