@@ -15,6 +15,7 @@ data class CounterDimens(
     val chromeHeight: Dp,
     val actionBarHeight: Dp,
     val dragNeedsHold: Boolean,
+    val showKeyboardHints: Boolean,
 )
 
 val PointerDimens = CounterDimens(
@@ -27,6 +28,7 @@ val PointerDimens = CounterDimens(
     chromeHeight = 56.dp,
     actionBarHeight = 60.dp,
     dragNeedsHold = false,
+    showKeyboardHints = true,
 )
 
 val TouchDimens = CounterDimens(
@@ -39,6 +41,7 @@ val TouchDimens = CounterDimens(
     chromeHeight = 56.dp,
     actionBarHeight = 68.dp,
     dragNeedsHold = true,
+    showKeyboardHints = false,
 )
 
 fun dimensFor(inputMode: InputMode): CounterDimens = when (inputMode) {

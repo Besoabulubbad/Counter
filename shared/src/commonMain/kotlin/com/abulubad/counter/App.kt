@@ -1,5 +1,7 @@
 package com.abulubad.counter
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -9,7 +11,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -21,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -61,8 +66,12 @@ import com.abulubad.counter.ui.paneFor
 import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterTheme
 import com.abulubad.counter.ui.theme.CounterType
+import com.abulubad.counter.ui.theme.LocalCounterDimens
+import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
 import kotlin.time.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.koinInject
 
 @Composable
@@ -82,6 +91,12 @@ private fun CounterShell() {
     val pane = LocalPane.current
     val compact = pane == Pane.Compact
     val expanded = pane == Pane.Expanded
+    val dimens = LocalCounterDimens.current
+    val dateLabel = remember {
+        val date = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+        fun cap(value: String) = value.take(3).lowercase().replaceFirstChar { it.uppercase() }
+        "${cap(date.dayOfWeek.name)} ${date.dayOfMonth} ${cap(date.month.name)}"
+    }
     val viewModel = koinInject<GridViewModel>()
     LaunchedEffect(viewModel) { viewModel.seed() }
     val state by viewModel.state.collectAsState()
@@ -137,8 +152,18 @@ private fun CounterShell() {
                 fontSize = CounterType.emphasis,
                 fontWeight = FontWeight.Medium,
             )
+            Spacer(Modifier.width(12.dp))
+            StatusDot(offline)
+            if (!compact) {
+                Spacer(Modifier.width(12.dp))
+                Text(dateLabel, color = CounterColors.OnChromeMuted, fontFamily = PlexMono, fontSize = CounterType.micro)
+            }
             Spacer(Modifier.weight(1f))
             if (!compact) {
+                if (dimens.showKeyboardHints) {
+                    ShortcutLegend()
+                    Spacer(Modifier.width(16.dp))
+                }
                 toggle()
                 Spacer(Modifier.width(12.dp))
                 PayButton(payLabel)
@@ -167,14 +192,14 @@ private fun CounterShell() {
                 if (viewMode == ViewMode.Order) {
                     OrderScreen(onAddItem, Modifier.weight(1f).fillMaxHeight())
                 } else {
-                    GridArea(state, viewMode, onSelect, cursor, cutId, onMove, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.weight(1f).fillMaxHeight())
+                    GridArea(state, viewMode, onSelect, cursor, cutId, onMove, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, outboxDepth.toInt(), Modifier.weight(1f).fillMaxHeight())
                 }
                 DetailPanel(selectedRow, selectedPos, onAdvance, viewModel::addToTicket, viewModel::book, ticketLines, ticketTotal, offline, outboxDepth, viewModel::toggleOffline, forceConflict, viewModel::toggleForceConflict, Modifier.width(340.dp).fillMaxHeight())
             }
         } else if (viewMode == ViewMode.Order) {
             OrderScreen(onAddItem, Modifier.fillMaxSize())
         } else {
-            GridArea(state, viewMode, onSelect, cursor, cutId, onMove, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.fillMaxSize())
+            GridArea(state, viewMode, onSelect, cursor, cutId, onMove, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, outboxDepth.toInt(), Modifier.fillMaxSize())
             if (selectedRow != null) {
                 ModalBottomSheet(
                     onDismissRequest = { selectedKey = null },
@@ -189,6 +214,29 @@ private fun CounterShell() {
         }
         }
     }
+}
+
+@Composable
+private fun StatusDot(offline: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.size(8.dp).background(if (offline) CounterColors.Held else CounterColors.CheckedInEdge, CircleShape))
+        Text(
+            if (offline) "offline" else "online",
+            color = CounterColors.OnChromeMuted,
+            fontFamily = PlexMono,
+            fontSize = CounterType.micro,
+        )
+    }
+}
+
+@Composable
+private fun ShortcutLegend() {
+    Text(
+        "arrows move · enter acts · esc clears · ctrl+x cut · ctrl+v paste",
+        color = CounterColors.OnChromeMuted,
+        fontFamily = PlexMono,
+        fontSize = CounterType.micro,
+    )
 }
 
 private fun handleGridKey(
@@ -268,10 +316,11 @@ private fun GridArea(
     conflict: Triple<GridRow, Int, Long>?,
     onRetry: () -> Unit,
     onDiscard: () -> Unit,
+    unsynced: Int,
     modifier: Modifier,
 ) {
     Column(modifier) {
-        CountersStrip(state.counters, Modifier.fillMaxWidth())
+        CountersStrip(state.counters, unsynced, Modifier.fillMaxWidth())
         if (conflict != null) {
             ConflictBanner(conflict.first, conflict.second, conflict.third, onRetry, onDiscard)
         }

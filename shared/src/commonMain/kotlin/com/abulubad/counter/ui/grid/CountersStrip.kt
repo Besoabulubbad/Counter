@@ -29,7 +29,7 @@ import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
 
 @Composable
-fun CountersStrip(counters: Counters, modifier: Modifier = Modifier) {
+fun CountersStrip(counters: Counters, unsynced: Int, modifier: Modifier = Modifier) {
     val compact = LocalPane.current == Pane.Compact
     Row(
         modifier
@@ -56,7 +56,7 @@ fun CountersStrip(counters: Counters, modifier: Modifier = Modifier) {
         CounterItem("booked", counters.booked)
         if (compact) {
             CounterItem("open", counters.open)
-            CounterItem("unsynced", 0)
+            CounterItem("unsynced", unsynced)
         } else {
             CounterItem("held", counters.held)
             CounterItem("paid", counters.paid)
