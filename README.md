@@ -35,8 +35,10 @@ sheet to a desktop rail.
   never a source set or build flavor. `inputMode` is read in exactly one place — the theme
   provider that populates `LocalCounterDimens`; every composable reads the tokens, never the
   input mode.
-- **One palette (`CounterColors`), one type scale (`CounterType`).** No color or size
-  literals outside `ui/theme`.
+- **One palette (`CounterColors`), one type scale (`CounterType`).** No color literals and no
+  type sizes (`.sp`) outside `ui/theme`; the grid's cell metrics — minimum width, padding, cue
+  and seam widths — live in `CounterDimens`. The fine geometry inside the cell cues (dash and
+  hatch spacing) is deliberately local to the draw code, not promoted to a design token.
 - **The local SQLDelight database is the source of truth.** The UI observes `Flow`s; derived
   values (the counters strip, the ticket total) are computed reactively, never stored.
 - **No architecture framework.** One plain `StateFlow` state-holder per screen. DI is Koin,
@@ -48,6 +50,13 @@ sheet to a desktop rail.
 comfortable — but the *data* is not yet windowed the way the rendering is. A season of ~50,000
 reservations would want a date-range query feeding the grid instead of a full-table load; that
 query is the next step, and the windowed layout above it already expects a bounded slice.
+
+**Accessibility, scoped.** Every cell state carries a second signal beyond hue — a dashed leading
+edge (held), a solid bar (checked-in), a diagonal hatch (no-show), and a payment rule whose width
+is the paid fraction — so the grid reads without relying on colour, and each fill clears WCAG AA
+against its white text. Screen-reader support (TalkBack, Compose `semantics`) is intentionally out
+of scope: this is a fixed-terminal demo, and the grid is a single custom-drawn canvas rather than
+a tree of labelled controls.
 
 ## Dependency injection: migrating from Hilt/Dagger to Koin
 
