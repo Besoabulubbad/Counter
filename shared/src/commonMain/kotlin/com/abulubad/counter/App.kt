@@ -96,7 +96,7 @@ private fun CounterShell() {
     val dateLabel = remember {
         val date = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
         fun cap(value: String) = value.take(3).lowercase().replaceFirstChar { it.uppercase() }
-        "${cap(date.dayOfWeek.name)} ${date.dayOfMonth} ${cap(date.month.name)}"
+        "${cap(date.dayOfWeek.name)} ${date.day} ${cap(date.month.name)}"
     }
     val viewModel = koinInject<GridViewModel>()
     LaunchedEffect(viewModel) { viewModel.seed() }
