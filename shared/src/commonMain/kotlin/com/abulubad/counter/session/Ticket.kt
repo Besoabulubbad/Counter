@@ -1,7 +1,10 @@
 package com.abulubad.counter.session
 
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 
 data class TicketLine(
     val id: String,
@@ -13,13 +16,15 @@ data class TicketLine(
     val oversold: Boolean = false,
 )
 
+@OptIn(ExperimentalAtomicApi::class)
 class Ticket {
-    private var counter = 0L
+    private val counter = AtomicLong(0)
     private val _lines = MutableStateFlow<List<TicketLine>>(emptyList())
     val lines: StateFlow<List<TicketLine>> = _lines
 
     fun add(label: String, qty: Int, amountMinorUnits: Long, origin: String, currency: String, oversold: Boolean = false) {
-        _lines.value = _lines.value + TicketLine("line-${counter++}", label, qty, amountMinorUnits, origin, currency, oversold)
+        val line = TicketLine("line-${counter.addAndFetch(1L)}", label, qty, amountMinorUnits, origin, currency, oversold)
+        _lines.update { it + line }
     }
 
     fun clear() {
