@@ -3,8 +3,10 @@ package com.abulubad.counter.ui.grid
 import com.abulubad.counter.data.CounterRepository
 import com.abulubad.counter.domain.DurationCode
 import com.abulubad.counter.domain.Reservation
+import com.abulubad.counter.domain.ReservationId
 import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.domain.Slot
+import com.abulubad.counter.domain.SlotId
 import com.abulubad.counter.domain.next
 import com.abulubad.counter.session.Ticket
 import com.abulubad.counter.session.TicketLine
@@ -85,5 +87,9 @@ class GridViewModel(
 
     fun book(slot: Slot, position: Int) {
         scope.launch { repository.book(slot, position, "Walk-in", 1, DurationCode.EIGHTEEN) }
+    }
+
+    fun move(id: ReservationId, toSlotId: SlotId, toPosition: Int, expectedVersion: Long) {
+        scope.launch { repository.move(id, toSlotId, toPosition, expectedVersion) }
     }
 }

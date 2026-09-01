@@ -30,6 +30,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -52,6 +54,7 @@ import com.abulubad.counter.ui.grid.ReservationGrid
 import com.abulubad.counter.ui.grid.ReservationList
 import com.abulubad.counter.ui.grid.SlotSheet
 import com.abulubad.counter.ui.grid.ViewMode
+import com.abulubad.counter.ui.grid.canMoveTo
 import com.abulubad.counter.ui.order.OrderItem
 import com.abulubad.counter.ui.order.OrderScreen
 import com.abulubad.counter.ui.paneFor
@@ -59,6 +62,7 @@ import com.abulubad.counter.ui.theme.CounterColors
 import com.abulubad.counter.ui.theme.CounterTheme
 import com.abulubad.counter.ui.theme.CounterType
 import com.abulubad.counter.ui.theme.PlexSans
+import kotlin.time.Clock
 import org.koin.compose.koinInject
 
 @Composable
@@ -93,6 +97,17 @@ private fun CounterShell() {
     val onSelect: (GridRow, Int) -> Unit = { row, position -> selectedKey = row.slot.id.value to position }
     val onAdvance: (Reservation) -> Unit = { viewModel.advance(it) }
     val onAddItem: (OrderItem) -> Unit = { viewModel.addItemToTicket(it.name, it.priceMinorUnits, it.sku) }
+    var cutId by remember { mutableStateOf<String?>(null) }
+    val onCut: (Reservation) -> Unit = { cutId = it.id.value }
+    val onCancelCut: () -> Unit = { cutId = null }
+    val onPaste: (GridRow, Int) -> Unit = { row, position ->
+        val moving = cutId?.let { c -> state.rows.firstNotNullOfOrNull { r -> r.cells.firstOrNull { it?.id?.value == c } } }
+        if (moving != null && canMoveTo(row, position, Clock.System.now())) {
+            viewModel.move(moving.id, row.slot.id, position, moving.version)
+            cutId = null
+            selectedKey = row.slot.id.value to position
+        }
+    }
     val selectedRow = selectedKey?.let { key -> state.rows.find { it.slot.id.value == key.first } }
     val selectedPos = selectedKey?.second ?: 0
     val cursor = selectedRow?.let { it to selectedPos }
@@ -141,21 +156,21 @@ private fun CounterShell() {
             Modifier.fillMaxSize()
                 .focusRequester(focusRequester)
                 .focusable()
-                .onPreviewKeyEvent { event -> handleGridKey(event, state, viewMode, selectedKey, onAdvance) { selectedKey = it } },
+                .onPreviewKeyEvent { event -> handleGridKey(event, state, viewMode, selectedKey, onAdvance, onCut, onPaste, onCancelCut) { selectedKey = it } },
         ) {
         if (expanded) {
             Row(Modifier.fillMaxSize()) {
                 if (viewMode == ViewMode.Order) {
                     OrderScreen(onAddItem, Modifier.weight(1f).fillMaxHeight())
                 } else {
-                    GridArea(state, viewMode, onSelect, cursor, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.weight(1f).fillMaxHeight())
+                    GridArea(state, viewMode, onSelect, cursor, cutId, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.weight(1f).fillMaxHeight())
                 }
                 DetailPanel(selectedRow, selectedPos, onAdvance, viewModel::addToTicket, viewModel::book, ticketLines, ticketTotal, offline, outboxDepth, viewModel::toggleOffline, forceConflict, viewModel::toggleForceConflict, Modifier.width(340.dp).fillMaxHeight())
             }
         } else if (viewMode == ViewMode.Order) {
             OrderScreen(onAddItem, Modifier.fillMaxSize())
         } else {
-            GridArea(state, viewMode, onSelect, cursor, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.fillMaxSize())
+            GridArea(state, viewMode, onSelect, cursor, cutId, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, Modifier.fillMaxSize())
             if (selectedRow != null) {
                 ModalBottomSheet(
                     onDismissRequest = { selectedKey = null },
@@ -178,6 +193,9 @@ private fun handleGridKey(
     viewMode: ViewMode,
     selectedKey: Pair<String, Int>?,
     onAdvance: (Reservation) -> Unit,
+    onCut: (Reservation) -> Unit,
+    onPaste: (GridRow, Int) -> Unit,
+    onCancelCut: () -> Unit,
     setSelectedKey: (Pair<String, Int>?) -> Unit,
 ): Boolean {
     if (event.type != KeyEventType.KeyDown || viewMode != ViewMode.Grid || state.rows.isEmpty()) return false
@@ -205,7 +223,29 @@ private fun handleGridKey(
                 false
             }
         }
+        Key.X -> {
+            val reservation = if ((event.isCtrlPressed || event.isMetaPressed) && selectedKey != null) {
+                rows.getOrNull(curRow)?.cells?.getOrNull(curCol)
+            } else {
+                null
+            }
+            if (reservation != null) {
+                onCut(reservation)
+                true
+            } else {
+                false
+            }
+        }
+        Key.V -> {
+            if (event.isCtrlPressed || event.isMetaPressed) {
+                onPaste(rows[curRow.coerceIn(0, rows.lastIndex)], curCol)
+                true
+            } else {
+                false
+            }
+        }
         Key.Escape -> {
+            onCancelCut()
             setSelectedKey(null)
             true
         }
@@ -219,6 +259,7 @@ private fun GridArea(
     viewMode: ViewMode,
     onSelect: (GridRow, Int) -> Unit,
     selected: Pair<GridRow, Int>?,
+    cutId: String?,
     conflict: Triple<GridRow, Int, Long>?,
     onRetry: () -> Unit,
     onDiscard: () -> Unit,
@@ -230,7 +271,7 @@ private fun GridArea(
             ConflictBanner(conflict.first, conflict.second, conflict.third, onRetry, onDiscard)
         }
         when (viewMode) {
-            ViewMode.Grid -> ReservationGrid(state, onSelect, selected, Modifier.weight(1f).fillMaxWidth())
+            ViewMode.Grid -> ReservationGrid(state, onSelect, selected, cutId, Modifier.weight(1f).fillMaxWidth())
             ViewMode.List -> ReservationList(state, onSelect, Modifier.weight(1f).fillMaxWidth())
             ViewMode.Order -> Unit
         }

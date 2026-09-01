@@ -45,6 +45,7 @@ fun ReservationGrid(
     state: GridUiState,
     onSelect: (GridRow, Int) -> Unit,
     selected: Pair<GridRow, Int>?,
+    cutId: String?,
     modifier: Modifier = Modifier,
 ) {
     val dimens = LocalCounterDimens.current
@@ -62,7 +63,7 @@ fun ReservationGrid(
         }
         Row(Modifier.weight(1f)) {
             TimeColumn(state.rows, scrollY, Modifier.width(dimens.timeColWidth).fillMaxHeight().clipToBounds())
-            GridBody(state, onSelect, selected, scrollX, scrollY, Modifier.weight(1f).fillMaxHeight().clipToBounds())
+            GridBody(state, onSelect, selected, cutId, scrollX, scrollY, Modifier.weight(1f).fillMaxHeight().clipToBounds())
         }
     }
 }
@@ -141,6 +142,7 @@ private fun GridBody(
     state: GridUiState,
     onSelect: (GridRow, Int) -> Unit,
     selected: Pair<GridRow, Int>?,
+    cutId: String?,
     scrollX: MutableState<Float>,
     scrollY: MutableState<Float>,
     modifier: Modifier,
@@ -210,6 +212,7 @@ private fun GridBody(
                         reservation = gridRow.cells.getOrNull(col),
                         currency = gridRow.slot.rate.currency,
                         selected = selected?.let { it.first.slot.id == gridRow.slot.id && it.second == col } ?: false,
+                        cut = cutId != null && gridRow.cells.getOrNull(col)?.id?.value == cutId,
                         onClick = { onSelect(gridRow, col) },
                         modifier = Modifier
                             .offset {

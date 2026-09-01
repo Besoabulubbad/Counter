@@ -82,6 +82,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 updateReservationStatus:
 UPDATE reservation SET status = ?, version = version + 1 WHERE id = ?;
 
+updateReservationSlotPosition:
+UPDATE reservation SET slotId = ?, position = ?, version = version + 1 WHERE id = ?;
+
 countOutbox:
 SELECT count(*) FROM outboxEntry;
 

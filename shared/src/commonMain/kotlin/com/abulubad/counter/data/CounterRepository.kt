@@ -11,10 +11,13 @@ import com.abulubad.counter.domain.ReservationId
 import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.domain.Resource
 import com.abulubad.counter.domain.Slot
+import com.abulubad.counter.domain.SlotId
 import com.abulubad.counter.sync.AdvanceStatusInput
 import com.abulubad.counter.sync.BookInput
+import com.abulubad.counter.sync.MoveInput
 import com.abulubad.counter.sync.MutationAdvanceStatus
 import com.abulubad.counter.sync.MutationBook
+import com.abulubad.counter.sync.MutationMove
 import com.abulubad.counter.sync.SyncJson
 import kotlin.time.Clock
 import kotlinx.coroutines.Dispatchers
@@ -72,6 +75,14 @@ class CounterRepository(private val database: CounterDatabase) {
                 1L,
             )
             queries.insertOutbox(MutationBook, payload, Clock.System.now().toEpochMilliseconds())
+        }
+    }
+
+    suspend fun move(id: ReservationId, toSlotId: SlotId, toPosition: Int, expectedVersion: Long) = withContext(Dispatchers.Default) {
+        val payload = SyncJson.encodeToString(MoveInput(id.value, toSlotId.value, toPosition, expectedVersion))
+        queries.transaction {
+            queries.updateReservationSlotPosition(toSlotId.value, toPosition.toLong(), id.value)
+            queries.insertOutbox(MutationMove, payload, Clock.System.now().toEpochMilliseconds())
         }
     }
 

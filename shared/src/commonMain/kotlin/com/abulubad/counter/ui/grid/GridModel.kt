@@ -3,6 +3,7 @@ package com.abulubad.counter.ui.grid
 import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.domain.Slot
+import kotlin.time.Instant
 
 data class Counters(
     val slots: Int,
@@ -53,6 +54,16 @@ fun buildGrid(
                 cells = (0 until slot.capacity).map { byPosition[it] },
             )
         }
+    return buildState(rows, slots, reservations)
+}
+
+fun canMoveTo(row: GridRow, toPosition: Int, now: Instant): Boolean {
+    if (toPosition !in 0 until row.slot.capacity) return false
+    if (row.cells.getOrNull(toPosition) != null) return false
+    return row.slot.startsAt >= now
+}
+
+private fun buildState(rows: List<GridRow>, slots: List<Slot>, reservations: List<Reservation>): GridUiState {
     val totalPositions = slots.sumOf { it.capacity }
     val active = reservations.filter { it.status != ReservationStatus.CANCELLED }
     val counters = Counters(

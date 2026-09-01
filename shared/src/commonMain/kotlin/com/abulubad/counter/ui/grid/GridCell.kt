@@ -42,6 +42,7 @@ internal fun GridCell(
     reservation: Reservation?,
     currency: String,
     selected: Boolean,
+    cut: Boolean,
     onClick: () -> Unit,
     modifier: Modifier,
 ) {
@@ -57,6 +58,7 @@ internal fun GridCell(
                 if (reservation != null) drawCellCues(reservation)
                 drawContent()
                 drawSeams()
+                if (cut) drawCutMarker()
                 if (selected) drawCursor()
             },
         contentAlignment = Alignment.CenterStart,
@@ -175,6 +177,17 @@ private fun DrawScope.drawCursor() {
         topLeft = Offset(w / 2, w / 2),
         size = Size(size.width - w, size.height - w),
         style = Stroke(width = w),
+    )
+}
+
+private fun DrawScope.drawCutMarker() {
+    drawRect(CounterColors.Surface.copy(alpha = 0.45f))
+    val w = 2.dp.toPx()
+    drawRect(
+        color = CounterColors.Ink,
+        topLeft = Offset(w / 2, w / 2),
+        size = Size(size.width - w, size.height - w),
+        style = Stroke(width = w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))),
     )
 }
 
