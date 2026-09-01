@@ -24,6 +24,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -231,13 +233,19 @@ private fun GridBody(
         }
 
         if (state.rows.isEmpty()) return@BoxWithConstraints
-        val sx = scrollX.value.coerceIn(0f, maxX)
-        val sy = scrollY.value.coerceIn(0f, maxY)
-        val firstRow = (sy / rowH).toInt().coerceIn(0, state.rows.lastIndex)
-        val lastRow = ((sy + bodyH) / rowH).toInt().coerceIn(0, state.rows.lastIndex)
         val lastPos = (state.positions - 1).coerceAtLeast(0)
-        val firstCol = (sx / cellW).toInt().coerceIn(0, lastPos)
-        val lastCol = ((sx + bodyW) / cellW).toInt().coerceIn(0, lastPos)
+        val firstRow by remember(rowH, bodyH, maxY, state.rows.size) {
+            derivedStateOf { (scrollY.value.coerceIn(0f, maxY) / rowH).toInt().coerceIn(0, state.rows.lastIndex) }
+        }
+        val lastRow by remember(rowH, bodyH, maxY, state.rows.size) {
+            derivedStateOf { ((scrollY.value.coerceIn(0f, maxY) + bodyH) / rowH).toInt().coerceIn(0, state.rows.lastIndex) }
+        }
+        val firstCol by remember(cellW, bodyW, maxX, lastPos) {
+            derivedStateOf { (scrollX.value.coerceIn(0f, maxX) / cellW).toInt().coerceIn(0, lastPos) }
+        }
+        val lastCol by remember(cellW, bodyW, maxX, lastPos) {
+            derivedStateOf { ((scrollX.value.coerceIn(0f, maxX) + bodyW) / cellW).toInt().coerceIn(0, lastPos) }
+        }
 
         Box(
             Modifier.fillMaxSize()
