@@ -99,7 +99,10 @@ private fun CounterShell() {
         "${cap(date.dayOfWeek.name)} ${date.day} ${cap(date.month.name)}"
     }
     val viewModel = koinInject<GridViewModel>()
-    LaunchedEffect(viewModel) { viewModel.seed() }
+    LaunchedEffect(viewModel) {
+        viewModel.seed()
+        viewModel.start()
+    }
     val state by viewModel.state.collectAsState()
     val offline by viewModel.offline.collectAsState()
     val outboxDepth by viewModel.outboxDepth.collectAsState()

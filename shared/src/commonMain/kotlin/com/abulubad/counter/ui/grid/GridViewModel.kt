@@ -29,9 +29,7 @@ class GridViewModel(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    init {
-        syncEngine.start()
-    }
+    fun start() = syncEngine.start()
 
     val offline: StateFlow<Boolean> = syncEngine.offline
 

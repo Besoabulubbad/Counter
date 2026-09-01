@@ -12,16 +12,42 @@ sealed interface SyncResult {
 class FakeBackend {
     var latencyMillis: Long = 420
     var forceConflict: Boolean = false
+    private val versions = mutableMapOf<String, Long>()
+    private val occupied = mutableSetOf<String>()
 
     suspend fun apply(entry: OutboxEntry): SyncResult {
         delay(latencyMillis)
-        if (!forceConflict) return SyncResult.Applied
         return when (entry.operation) {
             MutationAdvanceStatus -> {
                 val input = SyncJson.decodeFromString<AdvanceStatusInput>(entry.payload)
-                SyncResult.Conflict(serverVersion = input.expectedVersion + 1)
+                versioned(input.reservationId, input.expectedVersion)
             }
+            MutationMove -> {
+                val input = SyncJson.decodeFromString<MoveInput>(entry.payload)
+                versioned(input.reservationId, input.expectedVersion)
+            }
+            MutationBook -> book(SyncJson.decodeFromString(entry.payload))
             else -> SyncResult.Applied
         }
+    }
+
+    private fun versioned(reservationId: String, expectedVersion: Long): SyncResult {
+        val known = versions[reservationId]
+        if (forceConflict && known == null) {
+            val ahead = expectedVersion + 1
+            versions[reservationId] = ahead
+            return SyncResult.Conflict(ahead)
+        }
+        val server = known ?: expectedVersion
+        if (expectedVersion < server) return SyncResult.Conflict(server)
+        versions[reservationId] = expectedVersion + 1
+        return SyncResult.Applied
+    }
+
+    private fun book(input: BookInput): SyncResult {
+        val cell = "${input.slotId}:${input.position}"
+        if (!occupied.add(cell)) return SyncResult.Conflict(versions[input.reservationId] ?: 1)
+        versions[input.reservationId] = 1
+        return SyncResult.Applied
     }
 }

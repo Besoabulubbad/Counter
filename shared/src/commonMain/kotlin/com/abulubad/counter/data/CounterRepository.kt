@@ -12,6 +12,7 @@ import com.abulubad.counter.domain.ReservationStatus
 import com.abulubad.counter.domain.Resource
 import com.abulubad.counter.domain.Slot
 import com.abulubad.counter.domain.SlotId
+import com.abulubad.counter.domain.newReservationId
 import com.abulubad.counter.sync.AdvanceStatusInput
 import com.abulubad.counter.sync.BookInput
 import com.abulubad.counter.sync.MoveInput
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 
 class CounterRepository(private val database: CounterDatabase) {
@@ -53,7 +55,7 @@ class CounterRepository(private val database: CounterDatabase) {
     }
 
     suspend fun book(slot: Slot, position: Int, holderName: String, partySize: Int, duration: DurationCode) = withContext(Dispatchers.Default) {
-        val id = "r-${Clock.System.now().toEpochMilliseconds()}-$position"
+        val id = newReservationId().value
         val payload = SyncJson.encodeToString(
             BookInput(id, slot.id.value, position, partySize, holderName, duration.name, slot.rate.code, slot.rate.priceMinorUnits),
         )
@@ -94,6 +96,23 @@ class CounterRepository(private val database: CounterDatabase) {
 
     suspend fun markApplied(seq: Long) = withContext(Dispatchers.Default) {
         queries.deleteOutbox(seq)
+    }
+
+    suspend fun rebaseConflict(seq: Long, reservationId: String, serverVersion: Long) = withContext(Dispatchers.Default) {
+        val entry = queries.selectOutboxBySeq(seq).executeAsOneOrNull() ?: return@withContext
+        val rebased = rebasePayload(entry.operation, entry.payload, serverVersion) ?: return@withContext
+        queries.transaction {
+            queries.updateOutboxPayload(rebased, seq)
+            queries.updateReservationVersion(serverVersion + 1, reservationId)
+        }
+    }
+
+    private fun rebasePayload(operation: String, payload: String, serverVersion: Long): String? = when (operation) {
+        MutationAdvanceStatus ->
+            SyncJson.encodeToString(SyncJson.decodeFromString<AdvanceStatusInput>(payload).copy(expectedVersion = serverVersion))
+        MutationMove ->
+            SyncJson.encodeToString(SyncJson.decodeFromString<MoveInput>(payload).copy(expectedVersion = serverVersion))
+        else -> null
     }
 
     suspend fun seedIfEmpty(bundle: SeedBundle = buildSeed()) = withContext(Dispatchers.Default) {
