@@ -91,6 +91,9 @@ UPDATE reservation SET slotId = ?, position = ?, version = version + 1 WHERE id 
 updateReservationVersion:
 UPDATE reservation SET version = ? WHERE id = ?;
 
+updateReservationPayment:
+UPDATE reservation SET paidMinorUnits = ?, version = version + 1 WHERE id = ?;
+
 reservationAt:
 SELECT * FROM reservation WHERE slotId = ? AND position = ?;
 

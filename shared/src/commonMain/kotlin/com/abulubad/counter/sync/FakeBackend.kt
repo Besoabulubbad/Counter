@@ -26,6 +26,10 @@ class FakeBackend {
                 val input = SyncJson.decodeFromString<MoveInput>(entry.payload)
                 versioned(input.reservationId, input.expectedVersion)
             }
+            MutationTakePayment -> {
+                val input = SyncJson.decodeFromString<PaymentInput>(entry.payload)
+                versioned(input.reservationId, input.expectedVersion)
+            }
             MutationBook -> book(SyncJson.decodeFromString(entry.payload))
             else -> SyncResult.Applied
         }

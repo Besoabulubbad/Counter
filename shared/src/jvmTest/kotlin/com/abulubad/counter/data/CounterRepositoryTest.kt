@@ -1,6 +1,7 @@
 package com.abulubad.counter.data
 
 import com.abulubad.counter.sync.MutationMove
+import com.abulubad.counter.sync.MutationTakePayment
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -11,6 +12,20 @@ import kotlinx.coroutines.runBlocking
 class CounterRepositoryTest {
     private suspend fun seededRepository(): CounterRepository =
         CounterRepository(createCounterDatabase(DatabaseDriverFactory())).also { it.seedIfEmpty() }
+
+    @Test
+    fun takePaymentSettlesReservationAndQueuesOutbox() = runBlocking {
+        val repo = seededRepository()
+        val before = repo.reservations().first().first()
+
+        repo.takePayment(before.id, before.priceMinorUnits, before.version)
+
+        val after = repo.reservations().first().first { it.id == before.id }
+        assertEquals(before.priceMinorUnits, after.paidMinorUnits)
+        assertEquals(0L, after.balanceMinorUnits)
+        assertEquals(before.version + 1, after.version)
+        assertTrue(repo.pending().any { it.operation == MutationTakePayment })
+    }
 
     @Test
     fun moveRejectsOccupiedTargetCell() = runBlocking {

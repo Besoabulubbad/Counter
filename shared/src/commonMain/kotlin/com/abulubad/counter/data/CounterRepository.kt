@@ -19,6 +19,8 @@ import com.abulubad.counter.sync.MoveInput
 import com.abulubad.counter.sync.MutationAdvanceStatus
 import com.abulubad.counter.sync.MutationBook
 import com.abulubad.counter.sync.MutationMove
+import com.abulubad.counter.sync.MutationTakePayment
+import com.abulubad.counter.sync.PaymentInput
 import com.abulubad.counter.sync.SyncJson
 import kotlin.time.Clock
 import kotlinx.coroutines.Dispatchers
@@ -94,6 +96,14 @@ class CounterRepository(private val database: CounterDatabase) {
         }
     }
 
+    suspend fun takePayment(id: ReservationId, paidMinorUnits: Long, expectedVersion: Long) = withContext(Dispatchers.Default) {
+        val payload = SyncJson.encodeToString(PaymentInput(id.value, paidMinorUnits, expectedVersion))
+        queries.transaction {
+            queries.updateReservationPayment(paidMinorUnits, id.value)
+            queries.insertOutbox(MutationTakePayment, payload, Clock.System.now().toEpochMilliseconds())
+        }
+    }
+
     fun outboxDepth(): Flow<Long> = queries.countOutbox().asFlow().mapToOne(Dispatchers.Default)
 
     suspend fun pending(): List<OutboxEntry> = withContext(Dispatchers.Default) {
@@ -118,6 +128,8 @@ class CounterRepository(private val database: CounterDatabase) {
             SyncJson.encodeToString(SyncJson.decodeFromString<AdvanceStatusInput>(payload).copy(expectedVersion = serverVersion))
         MutationMove ->
             SyncJson.encodeToString(SyncJson.decodeFromString<MoveInput>(payload).copy(expectedVersion = serverVersion))
+        MutationTakePayment ->
+            SyncJson.encodeToString(SyncJson.decodeFromString<PaymentInput>(payload).copy(expectedVersion = serverVersion))
         else -> null
     }
 

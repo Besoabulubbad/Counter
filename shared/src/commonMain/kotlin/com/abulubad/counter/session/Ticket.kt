@@ -14,6 +14,7 @@ data class TicketLine(
     val origin: String,
     val currency: String,
     val oversold: Boolean = false,
+    val reservationId: String? = null,
 )
 
 @OptIn(ExperimentalAtomicApi::class)
@@ -22,8 +23,8 @@ class Ticket {
     private val _lines = MutableStateFlow<List<TicketLine>>(emptyList())
     val lines: StateFlow<List<TicketLine>> = _lines
 
-    fun add(label: String, qty: Int, amountMinorUnits: Long, origin: String, currency: String, oversold: Boolean = false) {
-        val line = TicketLine("line-${counter.addAndFetch(1L)}", label, qty, amountMinorUnits, origin, currency, oversold)
+    fun add(label: String, qty: Int, amountMinorUnits: Long, origin: String, currency: String, oversold: Boolean = false, reservationId: String? = null) {
+        val line = TicketLine("line-${counter.addAndFetch(1L)}", label, qty, amountMinorUnits, origin, currency, oversold, reservationId)
         _lines.update { it + line }
     }
 

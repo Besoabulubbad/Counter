@@ -59,7 +59,7 @@ class GridViewModel(
             .stateIn(scope, SharingStarted.WhileSubscribed(5_000), 0L)
 
     fun addToTicket(reservation: Reservation) =
-        ticket.add("Green fee · ${reservation.holderName}", 1, reservation.priceMinorUnits, "from grid", "USD")
+        ticket.add("Green fee · ${reservation.holderName}", 1, reservation.priceMinorUnits, "from grid", "USD", reservationId = reservation.id.value)
 
     fun addItemToTicket(name: String, priceMinorUnits: Long, sku: String, oversold: Boolean) =
         ticket.add(name, 1, priceMinorUnits, "from order · $sku", "USD", oversold)
@@ -73,8 +73,13 @@ class GridViewModel(
             totalMinorUnits = lines.sumOf { it.amountMinorUnits * it.qty },
             currency = lines.first().currency,
         )
+        val onTicket = state.value.rows.asSequence().flatMap { it.cells.asSequence() }.filterNotNull().associateBy { it.id.value }
+        val settled = lines.mapNotNull { it.reservationId }.distinct().mapNotNull { onTicket[it] }
         scope.launch {
-            if (receiptPrinter.print(receipt).isSuccess) ticket.clear()
+            if (receiptPrinter.print(receipt).isSuccess) {
+                settled.forEach { repository.takePayment(it.id, it.priceMinorUnits, it.version) }
+                ticket.clear()
+            }
         }
     }
 

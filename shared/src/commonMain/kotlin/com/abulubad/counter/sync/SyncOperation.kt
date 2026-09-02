@@ -6,11 +6,19 @@ import kotlinx.serialization.json.Json
 const val MutationAdvanceStatus = "advanceReservationStatus"
 const val MutationBook = "bookReservation"
 const val MutationMove = "moveReservation"
+const val MutationTakePayment = "takeReservationPayment"
 
 @Serializable
 data class AdvanceStatusInput(
     val reservationId: String,
     val status: String,
+    val expectedVersion: Long,
+)
+
+@Serializable
+data class PaymentInput(
+    val reservationId: String,
+    val paidMinorUnits: Long,
     val expectedVersion: Long,
 )
 
