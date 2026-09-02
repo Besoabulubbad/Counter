@@ -41,7 +41,7 @@ CREATE TABLE reservation (
 );
 
 CREATE INDEX slot_startsAt ON slot(startsAtEpochMs);
-CREATE INDEX reservation_slot ON reservation(slotId);
+CREATE UNIQUE INDEX reservation_cell ON reservation(slotId, position);
 
 CREATE TABLE outboxEntry (
   seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,6 +90,9 @@ UPDATE reservation SET slotId = ?, position = ?, version = version + 1 WHERE id 
 
 updateReservationVersion:
 UPDATE reservation SET version = ? WHERE id = ?;
+
+reservationAt:
+SELECT * FROM reservation WHERE slotId = ? AND position = ?;
 
 countOutbox:
 SELECT count(*) FROM outboxEntry;

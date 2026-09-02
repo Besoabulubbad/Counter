@@ -80,11 +80,17 @@ class CounterRepository(private val database: CounterDatabase) {
         }
     }
 
-    suspend fun move(id: ReservationId, toSlotId: SlotId, toPosition: Int, expectedVersion: Long) = withContext(Dispatchers.Default) {
+    suspend fun move(id: ReservationId, toSlotId: SlotId, toPosition: Int, expectedVersion: Long): Boolean = withContext(Dispatchers.Default) {
         val payload = SyncJson.encodeToString(MoveInput(id.value, toSlotId.value, toPosition, expectedVersion))
-        queries.transaction {
-            queries.updateReservationSlotPosition(toSlotId.value, toPosition.toLong(), id.value)
-            queries.insertOutbox(MutationMove, payload, Clock.System.now().toEpochMilliseconds())
+        queries.transactionWithResult {
+            val occupant = queries.reservationAt(toSlotId.value, toPosition.toLong()).executeAsOneOrNull()
+            if (occupant != null && occupant.id != id.value) {
+                false
+            } else {
+                queries.updateReservationSlotPosition(toSlotId.value, toPosition.toLong(), id.value)
+                queries.insertOutbox(MutationMove, payload, Clock.System.now().toEpochMilliseconds())
+                true
+            }
         }
     }
 
