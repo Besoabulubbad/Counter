@@ -3,6 +3,7 @@ package com.abulubad.counter.ui.grid
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,7 +18,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -84,8 +88,13 @@ private fun booked(row: GridRow): List<Pair<Int, Reservation>> =
 @Composable
 private fun PhoneList(state: GridUiState, onSelect: (GridRow, Int) -> Unit, modifier: Modifier) {
     val groups = remember(state) { state.rows.map { it to booked(it) }.filter { it.second.isNotEmpty() } }
-    val rowHeight = LocalCounterDimens.current.rowHeight
-    LazyColumn(modifier.fillMaxWidth().background(CounterColors.Surface)) {
+    val dimens = LocalCounterDimens.current
+    val rowHeight = dimens.rowHeight
+    val listState = rememberLazyListState()
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxWidth().background(CounterColors.Surface).dragToScroll(listState, dimens.pointerDragScroll),
+    ) {
         groups.forEach { (row, reservations) ->
             stickyHeader(key = "h-${row.slot.id.value}") {
                 SlotHeader(row, reservations.size)
@@ -177,9 +186,13 @@ internal fun metaLine(r: Reservation): String {
 private fun WideList(state: GridUiState, onSelect: (GridRow, Int) -> Unit, modifier: Modifier) {
     val entries = remember(state) { flatten(state) }
     val dimens = LocalCounterDimens.current
+    val listState = rememberLazyListState()
     Column(modifier.fillMaxWidth().background(CounterColors.Surface)) {
         WideHeader()
-        LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f).fillMaxWidth().dragToScroll(listState, dimens.pointerDragScroll),
+        ) {
             items(entries, key = { it.reservation.id.value }) { entry ->
                 WideRow(entry, dimens.rowHeight, onSelect)
             }
@@ -270,3 +283,15 @@ internal fun Modifier.bottomRule(color: Color): Modifier = drawBehind {
     val y = size.height - 1.dp.toPx()
     drawLine(color, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
 }
+
+private fun Modifier.dragToScroll(state: LazyListState, enabled: Boolean): Modifier =
+    if (!enabled) {
+        this
+    } else {
+        pointerInput(Unit) {
+            detectVerticalDragGestures { change, delta ->
+                change.consume()
+                state.dispatchRawDelta(-delta)
+            }
+        }
+    }

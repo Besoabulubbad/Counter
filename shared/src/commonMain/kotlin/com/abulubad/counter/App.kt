@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -112,6 +113,9 @@ private fun CounterShell() {
     val ticketTotal by viewModel.ticketTotal.collectAsState()
     val payLabel = if (ticketTotal > 0L) formatCurrency(ticketTotal, "USD") else null
     var viewMode by remember(compact) { mutableStateOf(if (compact) ViewMode.List else ViewMode.Grid) }
+    val gridScrollX = remember { mutableStateOf(0f) }
+    val gridScrollY = remember { mutableStateOf(0f) }
+    val gridLanded = remember { mutableStateOf(false) }
     var selectedKey by remember { mutableStateOf<Pair<String, Int>?>(null) }
     val onSelect: (GridRow, Int) -> Unit = { row, position -> selectedKey = row.slot.id.value to position }
     val onAdvance: (Reservation) -> Unit = { viewModel.advance(it) }
@@ -196,14 +200,14 @@ private fun CounterShell() {
                 if (viewMode == ViewMode.Order) {
                     OrderScreen(onAddItem, Modifier.weight(1f).fillMaxHeight())
                 } else {
-                    GridArea(state, viewMode, onSelect, cursor, cutId, onMove, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, outboxDepth.toInt(), Modifier.weight(1f).fillMaxHeight())
+                    GridArea(state, viewMode, onSelect, cursor, cutId, onMove, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, outboxDepth.toInt(), gridScrollX, gridScrollY, gridLanded, Modifier.weight(1f).fillMaxHeight())
                 }
                 DetailPanel(selectedRow, selectedPos, onAdvance, viewModel::addToTicket, viewModel::book, ticketLines, ticketTotal, offline, outboxDepth, viewModel::toggleOffline, forceConflict, viewModel::toggleForceConflict, Modifier.width(340.dp).fillMaxHeight())
             }
         } else if (viewMode == ViewMode.Order) {
             OrderScreen(onAddItem, Modifier.fillMaxSize())
         } else {
-            GridArea(state, viewMode, onSelect, cursor, cutId, onMove, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, outboxDepth.toInt(), Modifier.fillMaxSize())
+            GridArea(state, viewMode, onSelect, cursor, cutId, onMove, conflictLocation, viewModel::resolveRetry, viewModel::resolveDiscard, outboxDepth.toInt(), gridScrollX, gridScrollY, gridLanded, Modifier.fillMaxSize())
             if (selectedRow != null) {
                 ModalBottomSheet(
                     onDismissRequest = { selectedKey = null },
@@ -328,6 +332,9 @@ private fun GridArea(
     onRetry: () -> Unit,
     onDiscard: () -> Unit,
     unsynced: Int,
+    scrollX: MutableState<Float>,
+    scrollY: MutableState<Float>,
+    landed: MutableState<Boolean>,
     modifier: Modifier,
 ) {
     Column(modifier) {
@@ -336,7 +343,7 @@ private fun GridArea(
             ConflictBanner(conflict.first, conflict.second, conflict.third, onRetry, onDiscard)
         }
         when (viewMode) {
-            ViewMode.Grid -> ReservationGrid(state, onSelect, selected, cutId, onMove, Modifier.weight(1f).fillMaxWidth())
+            ViewMode.Grid -> ReservationGrid(state, onSelect, selected, cutId, onMove, scrollX, scrollY, landed, Modifier.weight(1f).fillMaxWidth())
             ViewMode.List -> ReservationList(state, onSelect, Modifier.weight(1f).fillMaxWidth())
             ViewMode.Order -> Unit
         }

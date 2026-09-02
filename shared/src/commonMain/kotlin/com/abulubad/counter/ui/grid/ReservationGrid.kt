@@ -44,10 +44,12 @@ import com.abulubad.counter.ui.theme.CounterType
 import com.abulubad.counter.ui.theme.LocalCounterDimens
 import com.abulubad.counter.ui.theme.PlexMono
 import com.abulubad.counter.ui.theme.PlexSans
+import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
@@ -60,11 +62,12 @@ fun ReservationGrid(
     selected: Pair<GridRow, Int>?,
     cutId: String?,
     onMove: (Reservation, GridRow, Int) -> Unit,
+    scrollX: MutableState<Float>,
+    scrollY: MutableState<Float>,
+    landed: MutableState<Boolean>,
     modifier: Modifier = Modifier,
 ) {
     val dimens = LocalCounterDimens.current
-    val scrollX = remember { mutableStateOf(0f) }
-    val scrollY = remember { mutableStateOf(0f) }
 
     Column(modifier.fillMaxSize().background(CounterColors.Surface)) {
         Row(Modifier.height(dimens.headerHeight)) {
@@ -77,7 +80,7 @@ fun ReservationGrid(
         }
         Row(Modifier.weight(1f)) {
             TimeColumn(state.rows, scrollY, Modifier.width(dimens.timeColWidth).fillMaxHeight().clipToBounds())
-            GridBody(state, onSelect, selected, cutId, onMove, scrollX, scrollY, Modifier.weight(1f).fillMaxHeight().clipToBounds())
+            GridBody(state, onSelect, selected, cutId, onMove, scrollX, scrollY, landed, Modifier.weight(1f).fillMaxHeight().clipToBounds())
         }
     }
 }
@@ -88,7 +91,7 @@ private fun HeaderStrip(positions: Int, scrollX: MutableState<Float>, modifier: 
     val density = LocalDensity.current
     BoxWithConstraints(modifier.background(CounterColors.SurfaceSunk)) {
         val width = constraints.maxWidth.toFloat()
-        val cellW = maxOf(with(density) { dimens.cellMinWidth.toPx() }, width / positions.coerceAtLeast(1))
+        val cellW = floor(maxOf(with(density) { dimens.cellMinWidth.toPx() }, width / positions.coerceAtLeast(1)))
         val cellWDp = with(density) { cellW.toDp() }
         val last = (positions - 1).coerceAtLeast(0)
         val firstCol by remember(cellW, width, last) {
@@ -123,7 +126,7 @@ private fun TimeColumn(rows: List<GridRow>, scrollY: MutableState<Float>, modifi
     val density = LocalDensity.current
     BoxWithConstraints(modifier.background(CounterColors.SurfaceSunk)) {
         if (rows.isEmpty()) return@BoxWithConstraints
-        val rowH = with(density) { dimens.rowHeight.toPx() }
+        val rowH = floor(with(density) { dimens.rowHeight.toPx() })
         val height = constraints.maxHeight.toFloat()
         val firstRow by remember(rowH, height, rows) {
             derivedStateOf { (scrollY.value / rowH).toInt().coerceIn(0, rows.lastIndex) }
@@ -169,16 +172,17 @@ private fun GridBody(
     onMove: (Reservation, GridRow, Int) -> Unit,
     scrollX: MutableState<Float>,
     scrollY: MutableState<Float>,
+    landed: MutableState<Boolean>,
     modifier: Modifier,
 ) {
     val dimens = LocalCounterDimens.current
     val density = LocalDensity.current
     BoxWithConstraints(modifier) {
-        val rowH = with(density) { dimens.rowHeight.toPx() }
+        val rowH = floor(with(density) { dimens.rowHeight.toPx() })
         val bodyW = constraints.maxWidth.toFloat()
         val bodyH = constraints.maxHeight.toFloat()
         val minCellPx = with(density) { dimens.cellMinWidth.toPx() }
-        val cellW = maxOf(minCellPx, bodyW / state.positions.coerceAtLeast(1))
+        val cellW = floor(maxOf(minCellPx, bodyW / state.positions.coerceAtLeast(1)))
         val cellWDp = with(density) { cellW.toDp() }
         val maxX = (state.positions * cellW - bodyW).coerceAtLeast(0f)
         val maxY = (state.rows.size * rowH - bodyH).coerceAtLeast(0f)
@@ -188,12 +192,11 @@ private fun GridBody(
             scrollY.value = scrollY.value.coerceIn(0f, maxY)
         }
 
-        val scrolledToNow = remember { mutableStateOf(false) }
         LaunchedEffect(state.rows.size) {
-            if (!scrolledToNow.value && state.rows.isNotEmpty()) {
+            if (!landed.value && state.rows.isNotEmpty()) {
                 val index = state.rows.indexOfFirst { it.slot.startsAt >= Clock.System.now() }
                 if (index > 0) scrollY.value = (index * rowH).coerceIn(0f, maxY)
-                scrolledToNow.value = true
+                landed.value = true
             }
         }
 
@@ -266,7 +269,7 @@ private fun GridBody(
             Modifier.fillMaxSize()
                 .scrollable(vertical, Orientation.Vertical)
                 .scrollable(horizontal, Orientation.Horizontal)
-                .pointerInput(state.rows, dimens.dragNeedsHold) {
+                .pointerInput(state.rows, dimens.pointerDragScroll) {
                     val reservationAt: (Offset) -> Reservation? = { offset ->
                         val col = ((offset.x + scrollX.value) / cellW).toInt()
                         val rowIndex = ((offset.y + scrollY.value) / rowH).toInt()
@@ -288,7 +291,45 @@ private fun GridBody(
                         }
                         drag.value = null
                     }
-                    if (dimens.dragNeedsHold) {
+                    if (dimens.pointerDragScroll) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            val slop = viewConfiguration.touchSlop
+                            var prev = down.position
+                            val dragged = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                                var moved = false
+                                while (!moved) {
+                                    val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id }
+                                        ?: return@withTimeoutOrNull false
+                                    if (!change.pressed) return@withTimeoutOrNull false
+                                    if ((change.position - down.position).getDistance() > slop) moved = true
+                                    prev = change.position
+                                }
+                                true
+                            }
+                            when (dragged) {
+                                true -> while (true) {
+                                    val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                                    if (!change.pressed) break
+                                    scrollX.value = (scrollX.value - (change.position.x - prev.x)).coerceIn(0f, maxX)
+                                    scrollY.value = (scrollY.value - (change.position.y - prev.y)).coerceIn(0f, maxY)
+                                    change.consume()
+                                    prev = change.position
+                                }
+                                null -> reservationAt(down.position)?.let { reservation ->
+                                    drag.value = DragState(reservation, prev)
+                                    while (true) {
+                                        val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                                        if (!change.pressed) break
+                                        drag.value = drag.value?.copy(pointer = change.position)
+                                        change.consume()
+                                    }
+                                    drop()
+                                }
+                                else -> Unit
+                            }
+                        }
+                    } else {
                         detectDragGesturesAfterLongPress(
                             onDragStart = { offset -> reservationAt(offset)?.let { drag.value = DragState(it, offset) } },
                             onDrag = { change, _ ->
@@ -300,27 +341,6 @@ private fun GridBody(
                             onDragEnd = drop,
                             onDragCancel = { drag.value = null },
                         )
-                    } else {
-                        awaitEachGesture {
-                            val down = awaitFirstDown(requireUnconsumed = false)
-                            val reservation = reservationAt(down.position) ?: return@awaitEachGesture
-                            val slop = viewConfiguration.touchSlop
-                            var started = false
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                if (!change.pressed) break
-                                if (!started && (change.position - down.position).getDistance() > slop) {
-                                    started = true
-                                    drag.value = DragState(reservation, change.position)
-                                }
-                                if (started) {
-                                    drag.value = drag.value?.copy(pointer = change.position)
-                                    change.consume()
-                                }
-                            }
-                            if (started) drop() else drag.value = null
-                        }
                     }
                 },
         ) {

@@ -17,7 +17,7 @@ data class CounterDimens(
     val gutter: Dp,
     val chromeHeight: Dp,
     val actionBarHeight: Dp,
-    val dragNeedsHold: Boolean,
+    val pointerDragScroll: Boolean,
     val showKeyboardHints: Boolean,
 )
 
@@ -33,7 +33,7 @@ val PointerDimens = CounterDimens(
     gutter = 14.dp,
     chromeHeight = 56.dp,
     actionBarHeight = 60.dp,
-    dragNeedsHold = false,
+    pointerDragScroll = true,
     showKeyboardHints = true,
 )
 
@@ -49,7 +49,7 @@ val TouchDimens = CounterDimens(
     gutter = 12.dp,
     chromeHeight = 56.dp,
     actionBarHeight = 68.dp,
-    dragNeedsHold = true,
+    pointerDragScroll = false,
     showKeyboardHints = false,
 )
 
