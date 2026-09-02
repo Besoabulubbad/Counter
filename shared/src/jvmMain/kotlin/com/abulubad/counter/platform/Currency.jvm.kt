@@ -7,9 +7,11 @@ import java.util.Locale
 
 actual fun formatCurrency(minorUnits: Long, currency: String): String {
     val unit = Currency.getInstance(currency)
+    val digits = unit.defaultFractionDigits.coerceAtLeast(0)
     val format = NumberFormat.getCurrencyInstance(Locale.getDefault()).apply {
         this.currency = unit
+        minimumFractionDigits = digits
+        maximumFractionDigits = digits
     }
-    val amount = BigDecimal(minorUnits).movePointLeft(unit.defaultFractionDigits.coerceAtLeast(0))
-    return format.format(amount)
+    return format.format(BigDecimal(minorUnits).movePointLeft(digits))
 }
