@@ -12,6 +12,30 @@ hard way on purpose — real 2D virtualization, offline-first writes with versio
 resolution, keyboard-first desktop operation, and a layout that adapts from a phone bottom
 sheet to a desktop rail.
 
+## Screenshots
+
+<sub>Rendered from `commonMain` at three window sizes and both input modes — regenerate with `./gradlew :desktopApp:screenshots`.</sub>
+
+**Reservation grid — desktop (Windows / JVM).** The 2D-virtualized tee sheet: sticky time and position axes, per-cell status and rate signals, a live counters strip, and the detail rail with the session ticket and the offline / conflict debug panel. It opens on the current local time.
+
+![Reservation grid on desktop](screenshots/grid-desktop.png)
+
+**One layout tree, every form factor.** The same code adapts by window size and input mode — a touch tablet keeps the grid at touch density; a phone falls back to a grouped, slot-by-slot list with a docked action bar. No per-platform screens.
+
+<p align="left">
+  <img src="screenshots/tablet-grid.png" alt="Tablet — grid (touch)" width="440" />
+  &nbsp;&nbsp;
+  <img src="screenshots/phone-list.png" alt="Phone — list (touch)" width="210" />
+</p>
+
+**List view.** The same reservations as an adaptive table — status, price, and outstanding balance per row.
+
+![List view](screenshots/list-desktop.png)
+
+**Order screen.** A category column and an adaptive item grid; tiles show SKU, price, and stock (amber under five on hand, red at zero).
+
+![Order screen](screenshots/order-desktop.png)
+
 ## What's in it
 
 | Feature | Notes |

@@ -15,6 +15,13 @@ dependencies {
     implementation(libs.compose.uiToolingPreview)
 }
 
+tasks.register<JavaExec>("screenshots") {
+    group = "verification"
+    description = "Render the Expanded/Medium/Compact layouts to PNGs off-screen"
+    mainClass.set("com.abulubad.counter.ScreenshotsKt")
+    classpath = sourceSets["main"].runtimeClasspath
+}
+
 compose.desktop {
     application {
         mainClass = "com.abulubad.counter.MainKt"

@@ -45,7 +45,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.abulubad.counter.domain.Reservation
 import com.abulubad.counter.domain.Slot
+import com.abulubad.counter.platform.InputMode
 import com.abulubad.counter.platform.formatCurrency
+import com.abulubad.counter.platform.inputMode as platformInputMode
 import com.abulubad.counter.ui.CounterScaffold
 import com.abulubad.counter.ui.LocalPane
 import com.abulubad.counter.ui.NavButton
@@ -77,8 +79,8 @@ import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.koinInject
 
 @Composable
-fun App() {
-    CounterTheme {
+fun App(inputMode: InputMode = platformInputMode) {
+    CounterTheme(inputMode) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             CompositionLocalProvider(LocalPane provides paneFor(maxWidth)) {
                 CounterShell()
@@ -168,7 +170,7 @@ private fun CounterShell() {
             }
             Spacer(Modifier.weight(1f))
             if (!compact) {
-                if (dimens.showKeyboardHints) {
+                if (dimens.showKeyboardHints && expanded) {
                     ShortcutLegend()
                     Spacer(Modifier.width(16.dp))
                 }
