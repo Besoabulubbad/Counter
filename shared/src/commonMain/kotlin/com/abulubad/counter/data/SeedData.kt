@@ -46,7 +46,7 @@ fun buildSeed(seed: Int = 42): SeedBundle {
 
     val zone = TimeZone.currentSystemDefault()
     val today = Clock.System.now().toLocalDateTime(zone)
-    val base = LocalDateTime(today.year, today.month, today.dayOfMonth, 6, 0).toInstant(zone)
+    val base = LocalDateTime(today.year, today.month, today.day, 6, 0).toInstant(zone)
     val gaps = intArrayOf(7, 8, 10, 7, 9, 11, 8, 12)
     val timeCount = 90
 
