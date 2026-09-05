@@ -1,6 +1,7 @@
 package com.abulubad.counter.ui.theme
 
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -16,6 +17,7 @@ fun CounterTheme(
         LocalCounterDimens provides dimensFor(inputMode),
         LocalCounterFonts provides counterFonts(),
         LocalIndication provides ripple(),
+        LocalTextStyle provides LocalTextStyle.current.copy(fontFeatureSettings = TabularFigures),
     ) {
         content()
     }
