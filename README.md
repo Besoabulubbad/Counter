@@ -75,6 +75,13 @@ comfortable — but the *data* is not yet windowed the way the rendering is. A s
 reservations would want a date-range query feeding the grid instead of a full-table load; that
 query is the next step, and the windowed layout above it already expects a bounded slice.
 
+**Persistence, by platform.** Android and iOS use a file-backed SQLite database, so a handheld
+the OS kills mid-shift restores its local state — including the unsynced outbox — on relaunch.
+The desktop build is intentionally in-memory: a counter terminal stays powered through the day,
+its offline resilience is the outbox surviving a network drop *within* the session rather than a
+process restart, and seeding a fresh sheet each launch keeps the demo honest about the current
+day. Cross-restart persistence is a mobile concern, and that is where it is wired.
+
 **Accessibility, scoped.** Every cell state carries a second signal beyond hue — a dashed leading
 edge (held), a solid bar (checked-in), a diagonal hatch (no-show), and a payment rule whose width
 is the paid fraction — so the grid reads without relying on colour, and each fill clears WCAG AA
